@@ -108,11 +108,20 @@ Le serveur accepte déjà les payloads bruts des hooks sur `POST /hook` (corresp
 | `SessionStart`, `UserPromptSubmit` | la session apparaît (bureau attitré) |
 | `PreToolUse` | l'agent va au poste de l'outil ; `Task` / `Agent` fait apparaître un sous-agent |
 | `PostToolUse` (Task), `SubagentStop` | le sous-agent revient faire son rapport puis disparaît |
-| `Notification` | bulle « ! » (permission demandée) |
+| `PermissionRequest`, `Notification` | bulle « ! » (permission demandée) ; le `PostToolUse` suivant le remet au travail |
+| `SubagentStart` | associe l'`agent_id` du sous-agent (ses outils s'affichent sur lui) |
 | `Stop` | petit saut de victoire, puis pause café |
 | `SessionEnd` | la session disparaît |
 
-Exemple de configuration à ajouter dans `~/.claude/settings.json`, ce qui couvre toutes les sessions Claude Code, terminal comme app desktop. Elle n'est **pas** installée par ce projet :
+Installation automatique (fusionne avec les hooks existants, idempotente, sauvegarde horodatée du fichier) :
+
+```bash
+node scripts/claude-hooks.mjs install
+```
+
+`node scripts/claude-hooks.mjs status` / `uninstall`. Les hooks sont pris en compte par les sessions déjà ouvertes à leur prochain événement. Le script ajoute aussi `PermissionRequest`, `PostToolUseFailure`, `StopFailure` et `SubagentStart`, gérés par l'adaptateur.
+
+Équivalent manuel (minimal) dans `~/.claude/settings.json`, qui couvre toutes les sessions Claude Code, terminal comme app desktop :
 
 ```json
 {
@@ -132,7 +141,7 @@ Exemple de configuration à ajouter dans `~/.claude/settings.json`, ce qui couvr
 Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le transmet tel quel. `-m 1` et `|| true` garantissent qu'un écran éteint ne ralentit ni ne bloque jamais Claude Code.
 
 À vérifier lors de l'intégration :
-- les appels d'outils faits *dans* un sous-agent ne sont attribués au sous-agent que si le payload porte un `agent_id` ; sinon ils s'affichent sur l'agent de la session ;
+- les appels d'outils faits *dans* un sous-agent sont attribués au sous-agent via l'`agent_id` reçu au `SubagentStart` ; sans `agent_id`, ils s'affichent sur l'agent de la session ;
 - l'app Claude Desktop (chat) n'a pas de hooks : seules les sessions Claude Code, y compris celles de l'app desktop, sont visibles.
 
 ## Étape suivante : écran de veille macOS

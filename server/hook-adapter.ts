@@ -8,14 +8,16 @@ import { parseEvent, type AgentEvent } from "../shared/events";
  * | SessionStart      | agent_spawn (session agent)                                            |
  * | UserPromptSubmit  | agent_spawn if the session is new                                      |
  * | PreToolUse        | agent_tool; for Task/Agent also agent_spawn of a sub-agent             |
- * | PostToolUse       | for Task/Agent: agent_done + agent_despawn of that sub-agent           |
- * | Notification      | agent_waiting (permission prompt / idle input)                         |
- * | Stop              | agent_done                                                             |
- * | SubagentStop      | agent_done + agent_despawn of the latest open sub-agent                |
+ * | PostToolUse(…)    | resumes work after a permission prompt; Task/Agent: closes sub-agent   |
+ * | PermissionRequest | agent_waiting ("!" bubble)                                             |
+ * | Notification      | agent_waiting (permission prompt / waiting for input)                  |
+ * | Stop, StopFailure | agent_done                                                             |
+ * | SubagentStart     | binds the sub-agent's `agent_id` (spawns one if no Task call announced it) |
+ * | SubagentStop      | agent_done + agent_despawn of that sub-agent (by agent_id, else latest)|
  * | SessionEnd        | agent_despawn (sub-agents follow their parent)                         |
  *
  * The session agent id is `session_id`. Tool calls made *inside* a sub-agent are attributed to it
- * when the payload carries an `agent_id`; otherwise they show on the session agent.
+ * when the payload carries an `agent_id` (bound at SubagentStart); otherwise they show on the session agent.
  * A payload that already is a valid AgentEvent is passed through unchanged.
  */
 export interface HookPayload {
@@ -27,6 +29,7 @@ export interface HookPayload {
   tool_use_id?: string;
   message?: string;
   agent_id?: string;
+  agent_type?: string;
   /** Not sent by Claude Code: lets other tools reuse this endpoint with their own character (e.g. "codex"). */
   agent_kind?: string;
 }
@@ -34,8 +37,11 @@ export interface HookPayload {
 const SUBAGENT_TOOLS = new Set(["Task", "Agent"]);
 
 interface Session {
-  open: { id: string; toolUseId?: string }[];
+  /** Sub-agents currently alive: screen id, the Task call that announced it, the hook agent_id once known. */
+  open: { id: string; toolUseId?: string; agentId?: string }[];
   count: number;
+  /** Agents showing a "!" bubble, resumed by their next PostToolUse. */
+  waiting: Set<string>;
 }
 
 export function summarize(input: Record<string, unknown> | undefined): string | undefined {
@@ -61,7 +67,7 @@ export class HookAdapter {
     const main = p.session_id || "claude-session";
     const out: AgentEvent[] = [];
     const session = this.ensure(main, p, out);
-    const actor = p.agent_id ? session.open.find((s) => s.id.endsWith(`/${p.agent_id}`))?.id ?? main : main;
+    const actor = (p.agent_id && session.open.find((s) => s.agentId === p.agent_id)?.id) || main;
 
     switch (p.hook_event_name) {
       case "SessionStart":
@@ -79,18 +85,37 @@ export class HookAdapter {
         break;
       }
       case "PostToolUse":
+      case "PostToolUseFailure":
+        if (session.waiting.delete(actor) && p.tool_name) out.push({ type: "agent_tool", agentId: actor, tool: p.tool_name, summary: summarize(p.tool_input) });
         if (p.tool_name && SUBAGENT_TOOLS.has(p.tool_name)) {
           const i = session.open.findIndex((s) => s.toolUseId && s.toolUseId === p.tool_use_id);
-          this.close(session, i >= 0 ? i : session.open.length - 1, out);
+          if (i >= 0) this.close(session, i, out);
         }
         break;
-      case "SubagentStop":
-        this.close(session, session.open.length - 1, out);
+      case "SubagentStart": {
+        if (!p.agent_id || session.open.some((s) => s.agentId === p.agent_id)) break;
+        const announced = session.open.find((s) => !s.agentId);
+        if (announced) announced.agentId = p.agent_id;
+        else {
+          const childId = `${main}/${p.agent_id}`;
+          session.open.push({ id: childId, agentId: p.agent_id });
+          out.push({ type: "agent_spawn", agentId: childId, parentId: main, kind: p.agent_kind ?? "claude", label: p.agent_type });
+        }
         break;
+      }
+      case "SubagentStop": {
+        const i = p.agent_id ? session.open.findIndex((s) => s.agentId === p.agent_id) : -1;
+        this.close(session, i >= 0 ? i : session.open.length - 1, out);
+        break;
+      }
+      case "PermissionRequest":
       case "Notification":
-        out.push({ type: "agent_waiting", agentId: main, reason: p.message?.slice(0, 200) });
+        session.waiting.add(actor);
+        out.push({ type: "agent_waiting", agentId: actor, reason: p.message?.slice(0, 200) });
         break;
       case "Stop":
+      case "StopFailure":
+        session.waiting.delete(main);
         out.push({ type: "agent_done", agentId: main });
         break;
       case "SessionEnd":
@@ -104,7 +129,7 @@ export class HookAdapter {
   private ensure(main: string, p: HookPayload, out: AgentEvent[]): Session {
     let s = this.sessions.get(main);
     if (!s) {
-      s = { open: [], count: 0 };
+      s = { open: [], count: 0, waiting: new Set() };
       this.sessions.set(main, s);
       if (p.hook_event_name !== "SessionEnd") {
         out.push({ type: "agent_spawn", agentId: main, kind: p.agent_kind ?? "claude", label: p.cwd?.split("/").pop() });

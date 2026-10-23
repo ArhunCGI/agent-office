@@ -71,7 +71,8 @@ describe("hook adapter", () => {
     ]);
     const task = h.handle({ hook_event_name: "PreToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu1", tool_input: { subagent_type: "Explore" } });
     expect(task).toContainEqual({ type: "agent_spawn", agentId: `${s}/tu1`, parentId: s, kind: "claude", label: "Explore" });
-    expect(h.handle({ hook_event_name: "PreToolUse", session_id: s, agent_id: "tu1", tool_name: "Grep", tool_input: { pattern: "x" } })).toEqual([
+    h.handle({ hook_event_name: "SubagentStart", session_id: s, agent_id: "a-1" });
+    expect(h.handle({ hook_event_name: "PreToolUse", session_id: s, agent_id: "a-1", tool_name: "Grep", tool_input: { pattern: "x" } })).toEqual([
       { type: "agent_tool", agentId: `${s}/tu1`, tool: "Grep", summary: "x" },
     ]);
     expect(h.handle({ hook_event_name: "Notification", session_id: s, message: "Claude needs permission" })).toEqual([
@@ -81,9 +82,29 @@ describe("hook adapter", () => {
       { type: "agent_done", agentId: `${s}/tu1` },
       { type: "agent_despawn", agentId: `${s}/tu1` },
     ]);
-    expect(h.handle({ hook_event_name: "PostToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu1" })).toEqual([]);
+    // The session was waiting (Notification): its next PostToolUse puts it back to work; the sub-agent is already closed.
+    expect(h.handle({ hook_event_name: "PostToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu1" })).toEqual([{ type: "agent_tool", agentId: s, tool: "Task", summary: undefined }]);
     expect(h.handle({ hook_event_name: "Stop", session_id: s })).toEqual([{ type: "agent_done", agentId: s }]);
     expect(h.handle({ hook_event_name: "SessionEnd", session_id: s })).toEqual([{ type: "agent_despawn", agentId: s }]);
+  });
+
+  it("binds sub-agents announced by Task to their SubagentStart agent_id, and resumes after a permission", () => {
+    const h = new HookAdapter();
+    const s = "sess-2";
+    h.handle({ hook_event_name: "SessionStart", session_id: s });
+    h.handle({ hook_event_name: "PreToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu9", tool_input: { description: "x" } });
+    expect(h.handle({ hook_event_name: "SubagentStart", session_id: s, agent_id: "ag1", agent_type: "Explore" })).toEqual([]);
+    expect(h.handle({ hook_event_name: "PreToolUse", session_id: s, agent_id: "ag1", tool_name: "Read" })).toEqual([{ type: "agent_tool", agentId: `${s}/tu9`, tool: "Read", summary: undefined }]);
+    expect(h.handle({ hook_event_name: "PermissionRequest", session_id: s, tool_name: "Bash" })).toEqual([{ type: "agent_waiting", agentId: s, reason: undefined }]);
+    expect(h.handle({ hook_event_name: "PostToolUse", session_id: s, tool_name: "Bash", tool_input: { command: "ls" } })).toEqual([{ type: "agent_tool", agentId: s, tool: "Bash", summary: "ls" }]);
+    // A sub-agent started without a Task call still shows up.
+    expect(h.handle({ hook_event_name: "SubagentStart", session_id: s, agent_id: "ag2", agent_type: "Plan" })).toEqual([{ type: "agent_spawn", agentId: `${s}/ag2`, parentId: s, kind: "claude", label: "Plan" }]);
+    expect(h.handle({ hook_event_name: "SubagentStop", session_id: s, agent_id: "ag1" })).toEqual([
+      { type: "agent_done", agentId: `${s}/tu9` },
+      { type: "agent_despawn", agentId: `${s}/tu9` },
+    ]);
+    // PostToolUse of the Task after SubagentStop does not close anything twice.
+    expect(h.handle({ hook_event_name: "PostToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu9" })).toEqual([]);
   });
 
   it("passes AgentEvents through and ignores junk", () => {
