@@ -1,0 +1,31 @@
+import type { AgentEvent, AgentSpawnEvent, Snapshot } from "../shared/events";
+
+/** Server-side memory of live agents, replayed to every (re)connecting screen. */
+export class AgentTracker {
+  private agents = new Map<string, { spawn: AgentSpawnEvent; last?: AgentEvent }>();
+
+  apply(e: AgentEvent): void {
+    if (e.type === "agent_spawn") {
+      if (!this.agents.has(e.agentId)) this.agents.set(e.agentId, { spawn: e });
+      return;
+    }
+    if (e.type === "agent_despawn") {
+      this.agents.delete(e.agentId);
+      for (const [id, a] of this.agents) if (a.spawn.parentId === e.agentId) this.agents.delete(id);
+      return;
+    }
+    const a = this.agents.get(e.agentId);
+    if (a) a.last = e;
+    else if (e.type !== "agent_done") this.agents.set(e.agentId, { spawn: { type: "agent_spawn", agentId: e.agentId, kind: "claude" }, last: e });
+  }
+
+  ids(): string[] {
+    return [...this.agents.keys()];
+  }
+
+  snapshot(): Snapshot {
+    // Parents first so sub-agents spawn next to them.
+    const list = [...this.agents.values()].sort((a, b) => Number(!!a.spawn.parentId) - Number(!!b.spawn.parentId));
+    return { type: "snapshot", agents: list };
+  }
+}

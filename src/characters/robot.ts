@@ -124,5 +124,5 @@ export const ROBOT: CharacterDefinition = {
   sizes: SIZES,
   animations: STANDARD_ANIMATIONS,
   draw,
-  idlePreferences: { terminal: 3, window: 1 },
+  idlePreferences: { cafe: 3, terminal: 2 },
 };

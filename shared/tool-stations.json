@@ -1,0 +1,36 @@
+{
+  "default": "desk",
+  "tools": {
+    "Read": "library",
+    "Grep": "library",
+    "Glob": "library",
+    "LS": "library",
+    "NotebookRead": "library",
+    "Edit": "desk",
+    "MultiEdit": "desk",
+    "Write": "desk",
+    "NotebookEdit": "desk",
+    "Bash": "terminal",
+    "BashOutput": "terminal",
+    "KillShell": "terminal",
+    "Task": "whiteboard",
+    "Agent": "whiteboard",
+    "TodoWrite": "whiteboard",
+    "ExitPlanMode": "whiteboard",
+    "WebFetch": "window",
+    "WebSearch": "window",
+    "SendMessage": "mailbox"
+  },
+  "prefixes": {
+    "mcp__": "window"
+  },
+  "animations": {
+    "desk": "work_type",
+    "library": "work_read",
+    "terminal": "work_terminal",
+    "whiteboard": "work_type",
+    "window": "work_read",
+    "mailbox": "work_read",
+    "cafe": "idle"
+  }
+}

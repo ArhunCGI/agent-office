@@ -187,7 +187,7 @@ const base = {
   fixedColors: FIXED,
   sizes: SIZES,
   animations: STANDARD_ANIMATIONS,
-  idlePreferences: { cafe: 3, window: 2, library: 1 },
+  idlePreferences: { cafe: 5, window: 1 },
 };
 
 export const CLAUDE: CharacterDefinition = {

@@ -51,7 +51,8 @@ export class CharacterRegistry {
   }
 }
 
-const HUES = [0, 28, -32, 52, -60, 85, 140, -110];
+/** Hue offsets stay close to the base colour so sub-agents still read as the same family. */
+const HUES = [0, 20, -22, 40, -40, 60, -60, 90];
 const ACCESSORIES: AccessoryId[] = ["none", "sprout", "bow", "cap", "flower"];
 
 /** Deterministic per-instance variant: the n-th sub-agent of a parent gets its own hue and accessory. */

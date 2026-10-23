@@ -1,13 +1,147 @@
-import { createServer } from "node:http";
-import { createServer as createVite } from "vite";
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { extname, join, normalize } from "node:path";
+import { WebSocketServer, type WebSocket } from "ws";
+import { parseEvent, type AgentEvent } from "../shared/events";
+import { play, randomScenario, scriptedScenario } from "../shared/scenario";
+import { HookAdapter } from "./hook-adapter";
+import { AgentTracker } from "./tracker";
 
 const PORT = Number(process.env.PORT ?? 4317);
+const PROD = process.env.NODE_ENV === "production";
+/** Built-in demo so `pnpm dev` is lively out of the box; it stops at the first real event. Disable with DEMO=0. */
+const DEMO = process.env.DEMO !== "0";
+const ROOT = join(import.meta.dirname, "..");
 
-const vite = await createVite({ server: { middlewareMode: true }, appType: "mpa" });
+const tracker = new AgentTracker();
+const adapter = new HookAdapter();
+const clients = new Set<WebSocket>();
+
+function broadcast(e: AgentEvent): void {
+  tracker.apply(e);
+  const data = JSON.stringify(e);
+  for (const c of clients) if (c.readyState === c.OPEN) c.send(data);
+}
+
+// ── Demo ─────────────────────────────────────────────────────────────────────
+let stopDemo: (() => void) | null = null;
+if (DEMO) {
+  let n = 0;
+  const stopA = play(() => scriptedScenario(`demo-${n++}`), broadcast, { loop: false });
+  let stopB: (() => void) | undefined;
+  const t = setTimeout(() => (stopB = play(randomScenario(Math.random, ["claude", "claude", "robot"]), (e) => broadcast({ ...e, agentId: `demo:${e.agentId}`, ...("parentId" in e && e.parentId ? { parentId: `demo:${e.parentId}` } : {}) } as AgentEvent))), 72_000);
+  stopDemo = () => {
+    stopA();
+    stopB?.();
+    clearTimeout(t);
+    for (const id of tracker.ids()) if (id.startsWith("demo")) broadcast({ type: "agent_despawn", agentId: id });
+    console.log("[agent-office] real events received → demo stopped");
+  };
+}
+function external(): void {
+  if (stopDemo) {
+    stopDemo();
+    stopDemo = null;
+  }
+}
+
+// ── HTTP ─────────────────────────────────────────────────────────────────────
+function readJson(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.setEncoding("utf8");
+    req.on("data", (c: string) => {
+      body += c;
+      if (body.length > 1_000_000) reject(new Error("payload too large"));
+    });
+    req.on("end", () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function json(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+async function api(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  const url = new URL(req.url ?? "/", "http://x");
+  if (req.method === "POST" && (url.pathname === "/hook" || url.pathname === "/events")) {
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch {
+      json(res, 400, { error: "invalid JSON" });
+      return true;
+    }
+    let events: AgentEvent[];
+    if (url.pathname === "/hook") events = adapter.handle(body);
+    else {
+      const list = Array.isArray(body) ? body : [body];
+      const parsed = list.map(parseEvent);
+      if (parsed.some((e) => !e)) {
+        json(res, 400, { error: "invalid AgentEvent" });
+        return true;
+      }
+      events = parsed as AgentEvent[];
+    }
+    if (events.length) external();
+    events.forEach(broadcast);
+    json(res, 202, { accepted: events.length, events });
+    return true;
+  }
+  if (req.method === "GET" && url.pathname === "/health") {
+    json(res, 200, { ok: true, clients: clients.size, agents: tracker.ids().length, demo: !!stopDemo });
+    return true;
+  }
+  return false;
+}
+
+const MIME: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json", ".svg": "image/svg+xml" };
+
+function serveStatic(req: IncomingMessage, res: ServerResponse): void {
+  const dist = join(ROOT, "dist");
+  let path = new URL(req.url ?? "/", "http://x").pathname;
+  if (path === "/") path = "/index.html";
+  if (path === "/gallery") path = "/gallery.html";
+  const file = normalize(join(dist, path));
+  if (!file.startsWith(dist) || !existsSync(file) || !statSync(file).isFile()) {
+    res.writeHead(404).end("not found");
+    return;
+  }
+  res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" });
+  createReadStream(file).pipe(res);
+}
+
+const vite = PROD ? null : await (await import("vite")).createServer({ server: { middlewareMode: true }, appType: "mpa", root: ROOT });
 
 const server = createServer((req, res) => {
-  if (req.url === "/gallery" || req.url?.startsWith("/gallery?")) req.url = req.url.replace("/gallery", "/gallery.html");
-  vite.middlewares(req, res);
+  void api(req, res).then((handled) => {
+    if (handled) return;
+    if (!vite) return serveStatic(req, res);
+    if (req.url === "/gallery" || req.url?.startsWith("/gallery?")) req.url = req.url.replace("/gallery", "/gallery.html");
+    vite.middlewares(req, res);
+  });
 });
 
-server.listen(PORT, () => console.log(`Agent Office → http://localhost:${PORT}  (galerie: /gallery)`));
+// ── WebSocket ────────────────────────────────────────────────────────────────
+const wss = new WebSocketServer({ noServer: true });
+server.on("upgrade", (req, socket, head) => {
+  if (new URL(req.url ?? "/", "http://x").pathname !== "/events") return; // let Vite HMR handle its own upgrades
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    clients.add(ws);
+    ws.send(JSON.stringify(tracker.snapshot()));
+    ws.on("close", () => clients.delete(ws));
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Agent Office → http://localhost:${PORT}   galerie: /gallery   mock sans serveur: /?mock=1`);
+  console.log(`  WebSocket ws://localhost:${PORT}/events · POST /hook (payload hook Claude Code) · POST /events (AgentEvent)${DEMO ? " · démo active (DEMO=0 pour couper)" : ""}`);
+});

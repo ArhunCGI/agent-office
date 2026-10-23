@@ -33,6 +33,8 @@ export interface RoomLayout {
   /** Window opening on the NE wall, in tiles along x. */
   window: { x0: number; x1: number };
   lamp: { x: number; y: number };
+  /** Centre of the lounge / cafeteria where idle agents hang out. */
+  lounge: { x: number; y: number };
 }
 
 /**
@@ -44,6 +46,7 @@ export const OFFICE: RoomLayout = {
   d: 9,
   window: { x0: 5, x1: 7 },
   lamp: { x: 0, y: 4 },
+  lounge: { x: 7, y: 6 },
   furniture: [
     { def: PLANT_BIG, x: 0, y: 0 },
     { def: DESK, x: 1, y: 0 },
@@ -62,7 +65,7 @@ export const OFFICE: RoomLayout = {
     { id: "desk-1", type: "desk", slots: [{ x: 1, y: 1, dir: "NE" }, { x: 2, y: 1, dir: "NE" }] },
     { id: "desk-2", type: "desk", slots: [{ x: 3, y: 1, dir: "NE" }, { x: 4, y: 1, dir: "NE" }] },
     { id: "window", type: "window", slots: [{ x: 5, y: 1, dir: "NE" }, { x: 6, y: 1, dir: "NE" }] },
-    { id: "library", type: "library", slots: [{ x: 8, y: 1, dir: "NE" }, { x: 9, y: 1, dir: "NE" }, { x: 7, y: 2, dir: "NE" }] },
+    { id: "library", type: "library", slots: [{ x: 8, y: 1, dir: "NE" }, { x: 9, y: 1, dir: "NE" }, { x: 7, y: 1, dir: "SE" }] },
     { id: "whiteboard", type: "whiteboard", slots: [{ x: 1, y: 2, dir: "NW" }, { x: 1, y: 3, dir: "NW" }, { x: 2, y: 3, dir: "NW" }] },
     { id: "terminal", type: "terminal", slots: [{ x: 1, y: 5, dir: "NW" }, { x: 1, y: 6, dir: "NW" }] },
     { id: "mailbox", type: "mailbox", slots: [{ x: 1, y: 8, dir: "NW" }] },
