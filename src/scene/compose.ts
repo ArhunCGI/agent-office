@@ -54,7 +54,7 @@ interface Fixture {
 }
 
 /** Furniture placements plus partition segments and door posts, all depth-sorted with the agents. */
-function fixtures(layout: WorldLayout): Fixture[] {
+export function fixtures(layout: WorldLayout): Fixture[] {
   const out: Fixture[] = layout.furniture.map((pl) => ({
     def: pl.def,
     x: pl.x,
@@ -66,8 +66,10 @@ function fixtures(layout: WorldLayout): Fixture[] {
   for (const p of layout.partitions) {
     const seg = partitionSegment(p.axis);
     const at = (i: number) => (p.axis === "y" ? { x: i, y: p.at } : { x: p.at, y: i });
+    // The depth box sits entirely on the back side of the line, so anything standing on the
+    // line's front side (furniture against the partition, agents) is strictly in front of it.
     const thin = (i: number, len: number): DepthBox =>
-      p.axis === "y" ? { x0: i, x1: i + len, y0: p.at - 0.05, y1: p.at + 0.05 } : { x0: p.at - 0.05, x1: p.at + 0.05, y0: i, y1: i + len };
+      p.axis === "y" ? { x0: i, x1: i + len, y0: p.at - 0.1, y1: p.at } : { x0: p.at - 0.1, x1: p.at, y0: i, y1: i + len };
     for (let i = p.from; i < p.to; i++) {
       if (p.doors.some(([s, e]) => i >= s && i < e)) continue;
       out.push({ def: seg, ...at(i), box: thin(i, 1), phase: 0 });
