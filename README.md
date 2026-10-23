@@ -144,19 +144,27 @@ Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le 
 - les appels d'outils faits *dans* un sous-agent sont attribués au sous-agent via l'`agent_id` reçu au `SubagentStart` ; sans `agent_id`, ils s'affichent sur l'agent de la session ;
 - l'app Claude Desktop (chat) n'a pas de hooks : seules les sessions Claude Code, y compris celles de l'app desktop, sont visibles.
 
-## Étape suivante : écran de veille macOS
+## Écran de veille macOS
 
-1. Installer [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver) : télécharger le `.zip` de la dernière release GitHub, double-cliquer sur `WebViewScreenSaver.saver`. Si macOS le bloque : Réglages système → Confidentialité et sécurité → « Ouvrir quand même ». (Le cask Homebrew est désactivé depuis octobre 2026 car il ne passe plus Gatekeeper.)
-
-2. Lancer le serveur en production au login, relancé automatiquement s'il s'arrête (LaunchAgent `com.agent-office.server`, logs dans `~/Library/Logs/agent-office.log`) :
+1. Lancer le serveur au login (LaunchAgent `com.agent-office.server`, relancé automatiquement, logs dans `~/Library/Logs/agent-office.log`) :
 
    ```bash
    scripts/launchagent.sh install
    ```
 
-   `scripts/launchagent.sh status` pour vérifier, `scripts/launchagent.sh uninstall` pour retirer. Relancer `install` après une mise à jour du code (rebuild + rechargement). `DEMO=0 scripts/launchagent.sh install` désactive la démo.
+   `scripts/launchagent.sh status` / `uninstall` ; relancer `install` après une mise à jour du code. `DEMO=0 scripts/launchagent.sh install` désactive la démo.
 
-3. Réglages système → Économiseur d'écran → WebViewScreenSaver → Options → URL `http://localhost:4317/`.
+2. Installer l'économiseur natif **Agent Office** (app extension, voir [`saver/README.md`](saver/README.md)) :
+
+   ```bash
+   saver/install.sh
+   ```
+
+3. Réglages Système → Fond d'écran → Économiseur d'écran → **Agent Office**.
+
+Pourquoi pas WebViewScreenSaver : sur macOS 26, les `.saver` tiers passent par `legacyScreenSaver`, qui retombe sur Hello en plein écran (issue liquidx/webviewscreensaver#97, sans correctif). L'économiseur `saver/` utilise le même mécanisme que les économiseurs Apple.
+
+**Mac gérés par MDM** : si un profil impose l'économiseur (`moduleName` dans `/Library/Managed Preferences/com.apple.screensaver.plist`), macOS lance celui-ci en plein écran quel que soit le choix dans les Réglages. Il faut demander à l'administrateur de retirer cette clé.
 
 La page est déjà en mode écran de veille : plein écran, curseur masqué, aucune interaction, fond sombre, scale entier automatique, rendu arrêté quand la page est cachée.
 

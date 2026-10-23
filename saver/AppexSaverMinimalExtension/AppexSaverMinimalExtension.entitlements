@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Agent Office: the web view loads http://localhost:4317/ -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Apple's own screensavers carry these two lookups. On macOS 27.2 the
+	     sample renders without them; they stay for the macOS 14 and 15
+	     releases the sample also targets. -->
+	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+	<array>
+		<string>com.apple.CARenderServer</string>
+		<string>com.apple.CoreDisplay.master</string>
+	</array>
+</dict>
+</plist>
