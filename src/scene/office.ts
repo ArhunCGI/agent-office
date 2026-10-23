@@ -4,8 +4,8 @@ import type { CharacterRegistry } from "../characters/registry";
 import { variantFor } from "../characters/registry";
 import { ANIM_NAMES, type AnimName, type Direction } from "../characters/types";
 import { Agent, directionOf, towardViewer } from "../engine/agent";
-import { findPath, walkable, type Grid, type Tile } from "../engine/pathfinding";
-import { obstacles, type RoomLayout, type Slot } from "../world/layout";
+import { distanceMap, findPath, walkable, type Grid, type Tile } from "../engine/pathfinding";
+import { isFloor, obstacles, wallBetween, type Slot, type WorldLayout } from "../world/layout";
 import type { Actor } from "./compose";
 
 interface Meta {
@@ -16,6 +16,10 @@ interface Meta {
   /** True after agent_done until the next tool/waiting event (makes double "done" harmless). */
   finished: boolean;
   returnThenDespawn: boolean;
+  /** Simulation time at which a delayed despawn (after a goodbye chat) happens. */
+  despawnAt: number | null;
+  /** Session agents own a desk seat; their Edit/Write calls go there. */
+  home: Slot | null;
 }
 
 export interface OfficeOptions {
@@ -24,6 +28,18 @@ export interface OfficeOptions {
 }
 
 const tkey = (t: Tile) => `${t.x},${t.y}`;
+
+/** A speech bubble with fake text shown above an agent. */
+export interface Speech {
+  agentId: string;
+  seed: number;
+  question: boolean;
+  start: number;
+  end: number;
+}
+
+const LINE = 1.9;
+const GAP = 0.35;
 const FRONT: Direction[] = ["SE", "SW"];
 
 /**
@@ -36,17 +52,28 @@ export class Office {
   /** Tile → agent that claimed it as a destination (station slot or idle spot). */
   private reserved = new Map<string, string>();
   private mainCount = new Map<string, number>();
+  /** Desk seat key → session agent owning it. */
+  private homes = new Map<string, string>();
   readonly grid: Grid;
+  /** Simulation clock (seconds). */
+  time = 0;
+  private speechQueue: Speech[] = [];
+  private speechSeed = 0;
   private rng: () => number;
   private tools: ToolStationConfig;
 
   constructor(
-    readonly layout: RoomLayout,
+    readonly layout: WorldLayout,
     readonly registry: CharacterRegistry,
     opts: OfficeOptions = {},
   ) {
     const blocked = obstacles(layout);
-    this.grid = { w: layout.w, d: layout.d, blocked: (x, y) => blocked.has(`${x},${y}`) };
+    this.grid = {
+      w: layout.w,
+      d: layout.d,
+      blocked: (x, y) => !isFloor(layout, x, y) || blocked.has(`${x},${y}`),
+      wall: (ax, ay, bx, by) => wallBetween(layout, ax, ay, bx, by),
+    };
     this.rng = opts.rng ?? Math.random;
     this.tools = opts.toolConfig ?? DEFAULT_TOOL_CONFIG;
   }
@@ -128,24 +155,24 @@ export class Office {
     if (isChild) {
       const pm = parent ? this.meta.get(parent.id) : undefined;
       variantIndex = pm ? ++pm.children : 1;
-      tile = this.freeTileNear(parent ? parent.tile() : { x: 5, y: 4 }) ?? { x: 5, y: 4 };
+      tile = this.freeTileNear(parent ? parent.tile() : this.layout.spawn) ?? this.layout.spawn;
     } else {
       variantIndex = this.mainCount.get(def.id) ?? 0;
       this.mainCount.set(def.id, variantIndex + 1);
-      tile = this.freeTileNear({ x: 5, y: 4 }) ?? { x: 5, y: 4 };
+      tile = this.freeTileNear(this.layout.spawn) ?? this.layout.spawn;
     }
     const sprites = this.registry.sprites(def, variantFor(variantIndex, isChild));
     const a = new Agent(id, kind, sprites, tile, parentId, label);
     a.dir = parent ? towardViewer(parent.dir) : "SE";
     this.agents.set(id, a);
-    this.meta.set(id, { isChild, children: 0, pending: [], finished: false, returnThenDespawn: false });
+    this.meta.set(id, { isChild, children: 0, pending: [], finished: false, returnThenDespawn: false, despawnAt: null, home: isChild ? null : this.claimHome(id) });
     this.reserved.set(tkey(tile), id);
   }
 
-  private despawn(a: Agent): void {
+  private despawn(a: Agent, force = false): void {
     const m = this.meta.get(a.id)!;
     const parent = a.parentId ? this.agents.get(a.parentId) : undefined;
-    if (m.isChild && parent && parent.state !== "despawning" && Math.hypot(parent.x - a.x, parent.y - a.y) > 1.6) {
+    if (!force && m.isChild && parent && parent.state !== "despawning" && Math.hypot(parent.x - a.x, parent.y - a.y) > 1.6) {
       m.returnThenDespawn = true;
       if (a.state !== "returning") this.startReturn(a, parent);
       return;
@@ -164,13 +191,22 @@ export class Office {
   // ── Behaviour ─────────────────────────────────────────────────────────────
 
   update(dt: number): void {
+    this.time += dt;
+    this.speechQueue = this.speechQueue.filter((s) => s.end > this.time && this.agents.has(s.agentId));
     for (const a of this.agents.values()) {
       a.update(dt);
       const m = this.meta.get(a.id)!;
+      if (m.despawnAt !== null && this.time >= m.despawnAt) {
+        m.despawnAt = null;
+        this.despawn(a, true);
+        continue;
+      }
       switch (a.state) {
         case "spawning":
           if (a.timer === 0) {
             this.enterIdle(a, 0.4 + this.rng());
+            // A new sub-agent gets briefed by its parent.
+            if (a.parentId && this.agents.has(a.parentId)) this.converse(a.parentId, a.id, 2);
             const queued = m.pending.splice(0);
             for (const e of queued) this.apply(e);
           }
@@ -186,10 +222,12 @@ export class Office {
           if (a.timer === 0) {
             a.state = "gone";
             this.release(a);
+            for (const [k, owner] of this.homes) if (owner === a.id) this.homes.delete(k);
           }
           break;
         case "idle":
           if (!a.isMoving() && a.timer === 0) this.wander(a);
+          else if (!a.isMoving() && a.restTime > 3 && this.rng() < dt * 0.15) this.chatWithNeighbour(a);
           break;
       }
     }
@@ -215,7 +253,7 @@ export class Office {
     let facing: Direction | null = null;
     let pause = 2 + this.rng() * 4;
     if (m.isChild && parent) {
-      target = this.randomFreeTile(parent.tile(), 2);
+      target = this.randomFreeTile(parent.tile(), 2, a);
     } else {
       // Idle agents gravitate to the lounge so they read differently from busy ones at their stations.
       const prefs: Record<string, number> = { wander: 3, cafe: 4, ...(a.sprites.def.idlePreferences ?? {}) };
@@ -228,7 +266,7 @@ export class Office {
           pause = 6 + this.rng() * 6;
         }
       }
-      target ??= this.randomFreeTile(this.layout.lounge, 2) ?? this.randomFreeTile(a.tile(), 3);
+      target ??= this.randomFreeTile(this.layout.lounge, 2, a) ?? this.randomFreeTile(a.tile(), 3, a);
     }
     if (!target) {
       a.timer = pause;
@@ -250,9 +288,12 @@ export class Office {
     a.walk(this.pathFor(a, target), () => {
       const m = this.meta.get(a.id);
       a.dir = towardViewer(directionOf(parent.x - a.x, parent.y - a.y));
+      // Report back to the parent before leaving.
+      const turns = this.converse(a.id, parent.id, 2);
       if (m?.returnThenDespawn) {
         m.returnThenDespawn = false;
-        this.despawn(a);
+        this.enterIdle(a, 99);
+        m.despawnAt = this.time + turns;
       } else this.enterIdle(a, 3 + this.rng() * 3);
     });
   }
@@ -261,7 +302,8 @@ export class Office {
     this.release(a);
     // When every slot is taken, queue up on the closest free tile next to the station.
     const anchor = this.layout.stations.find((s) => s.type === station)?.slots[0];
-    const slot = this.pickSlot(station, a);
+    const home = this.meta.get(a.id)?.home;
+    const slot = station === "desk" && home && this.isFree(home, a.id) ? home : this.pickSlot(station, a);
     const target = slot ?? (anchor && this.freeTileNear(anchor)) ?? this.freeTileNear(a.tile()) ?? a.tile();
     const facing = slot?.dir ?? anchor?.dir;
     this.reserved.set(tkey(target), a.id);
@@ -271,6 +313,42 @@ export class Office {
       if (facing) a.dir = facing;
       a.setAnim(anim);
     });
+  }
+
+  // ── Conversations ─────────────────────────────────────────────────────────
+
+  /** Schedules `turns` alternating bubbles (first one is a question). Returns the total duration. */
+  converse(first: string, second: string, turns: number): number {
+    const start = Math.max(this.time, this.busyUntil(first), this.busyUntil(second));
+    for (let i = 0; i < turns; i++) {
+      const t0 = start + i * (LINE + GAP);
+      this.speechQueue.push({ agentId: i % 2 === 0 ? first : second, seed: this.speechSeed++ % 64, question: i % 2 === 0, start: t0, end: t0 + LINE });
+    }
+    return start - this.time + turns * (LINE + GAP);
+  }
+
+  private busyUntil(id: string): number {
+    let t = 0;
+    for (const s of this.speechQueue) if (s.agentId === id) t = Math.max(t, s.end + GAP);
+    return t;
+  }
+
+  /** Idle agents standing close together sometimes have a little chat. */
+  private chatWithNeighbour(a: Agent): void {
+    if (this.busyUntil(a.id) > this.time) return;
+    for (const b of this.agents.values()) {
+      if (b === a || b.state !== "idle" || b.isMoving() || this.busyUntil(b.id) > this.time) continue;
+      if (Math.hypot(a.x - b.x, a.y - b.y) > 3.2) continue;
+      this.converse(a.id, b.id, 2 + Math.floor(this.rng() * 3));
+      a.dir = towardViewer(directionOf(b.x - a.x, b.y - a.y));
+      b.dir = towardViewer(directionOf(a.x - b.x, a.y - b.y));
+      return;
+    }
+  }
+
+  /** Bubbles visible right now (an agent asking for permission shows its "!" instead). */
+  speeches(): Speech[] {
+    return this.speechQueue.filter((s) => s.start <= this.time && this.agents.get(s.agentId)?.state !== "waiting");
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -294,16 +372,19 @@ export class Office {
     return r === undefined || r === self;
   }
 
-  /** Nearest free slot of the given station type. */
+  /** Nearest free slot (by walking distance) of the given station type; other agents' home desks come last. */
   pickSlot(type: string, a: Agent): Slot | null {
+    const dist = distanceMap(this.grid, a.tile());
     let best: Slot | null = null;
     let bestD = Infinity;
-    const at = a.tile();
     for (const st of this.layout.stations) {
       if (st.type !== type) continue;
       for (const s of st.slots) {
         if (!this.isFree(s, a.id)) continue;
-        const d = Math.abs(s.x - at.x) + Math.abs(s.y - at.y);
+        const steps = dist[s.y * this.grid.w + s.x]!;
+        if (steps < 0) continue;
+        const owner = this.homes.get(tkey(s));
+        const d = steps + (owner && owner !== a.id ? 1000 : 0);
         if (d < bestD) {
           bestD = d;
           best = s;
@@ -313,26 +394,37 @@ export class Office {
     return best;
   }
 
-  /** Breadth-first search for the closest walkable tile that is neither reserved nor stood on. */
-  freeTileNear(from: Tile): Tile | null {
-    const seen = new Set<string>([tkey(from)]);
-    const queue: Tile[] = [from];
-    while (queue.length) {
-      const t = queue.shift()!;
-      if (this.isFree(t) && !this.occupiedByAgent(t)) return t;
-      for (const [dx, dy] of [
-        [1, 0],
-        [0, 1],
-        [-1, 0],
-        [0, -1],
-      ] as const) {
-        const n = { x: t.x + dx, y: t.y + dy };
-        if (n.x < 0 || n.y < 0 || n.x >= this.grid.w || n.y >= this.grid.d || seen.has(tkey(n))) continue;
-        seen.add(tkey(n));
-        queue.push(n);
+  /** Gives a new session agent its own desk seat (first seat of the first unowned desk). */
+  private claimHome(id: string): Slot | null {
+    for (const st of this.layout.stations) {
+      if (st.type !== "desk") continue;
+      if (st.slots.some((s) => this.homes.has(tkey(s)))) continue;
+      const seat = st.slots[0];
+      if (seat) {
+        this.homes.set(tkey(seat), id);
+        return seat;
       }
     }
     return null;
+  }
+
+  /** Closest reachable tile (walking distance) that is neither reserved nor stood on. */
+  freeTileNear(from: Tile): Tile | null {
+    const dist = distanceMap(this.grid, from);
+    let best: Tile | null = null;
+    let bestD = Infinity;
+    for (let y = 0; y < this.grid.d; y++) {
+      for (let x = 0; x < this.grid.w; x++) {
+        const d = dist[y * this.grid.w + x]!;
+        if (d < 0 || d >= bestD) continue;
+        const t = { x, y };
+        if (this.isFree(t) && !this.occupiedByAgent(t)) {
+          best = t;
+          bestD = d;
+        }
+      }
+    }
+    return best;
   }
 
   private occupiedByAgent(t: Tile): boolean {
@@ -343,12 +435,15 @@ export class Office {
     return false;
   }
 
-  private randomFreeTile(around: Tile, radius: number): Tile | null {
+  /** Random free tile within `radius` of a point, reachable by the agent. */
+  private randomFreeTile(around: Tile, radius: number, a: Agent): Tile | null {
+    const dist = distanceMap(this.grid, a.tile());
     const options: Tile[] = [];
     for (let y = around.y - radius; y <= around.y + radius; y++) {
       for (let x = around.x - radius; x <= around.x + radius; x++) {
+        if (x < 0 || y < 0 || x >= this.grid.w || y >= this.grid.d) continue;
         const t = { x, y };
-        if ((x !== around.x || y !== around.y) && this.isFree(t) && findPath(this.grid, around, t)) options.push(t);
+        if ((x !== around.x || y !== around.y) && this.isFree(t) && dist[y * this.grid.w + x]! > 0) options.push(t);
       }
     }
     return options.length ? options[Math.floor(this.rng() * options.length)]! : null;

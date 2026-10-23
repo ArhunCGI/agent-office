@@ -76,3 +76,54 @@ export function poofFrame(w: number, h: number, ax: number, ay: number, t: numbe
   }
   return bmp;
 }
+
+const QUESTION = [".kk.", "k..k", "...k", "..k.", "....", "..k."];
+
+/**
+ * Speech bubble with fake text ("lorem" dashes), deterministic per seed. `question` ends the
+ * text with a "?" glyph. The tail is at the bottom-left corner: (2, h - 1).
+ */
+export function speechBubble(seed: number, question: boolean): Bitmap {
+  const rnd = (k: number) => {
+    const s = Math.sin((seed + 1) * 12.9898 + k * 78.233) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const lines = 1 + (rnd(1) > 0.45 ? 1 : 0);
+  const textW = 10 + Math.floor(rnd(2) * 9) + (question ? 5 : 0);
+  const w = textW + 6;
+  const boxH = lines === 1 ? 9 : 12;
+  const h = boxH + 3;
+  const bmp = new Bitmap(w, h);
+  const m = new Mask(w, h).roundRect(0, 0, w, boxH, 2);
+  for (let y = 0; y < boxH; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!m.has(x, y)) continue;
+      const edge = !m.has(x - 1, y) || !m.has(x + 1, y) || !m.has(x, y - 1) || !m.has(x, y + 1);
+      bmp.set(x, y, edge ? P.ink : P.cream);
+    }
+  }
+  // Tail.
+  bmp.set(2, boxH - 1, P.cream);
+  bmp.set(3, boxH - 1, P.cream);
+  bmp.set(1, boxH, P.ink);
+  bmp.set(2, boxH, P.cream);
+  bmp.set(3, boxH, P.ink);
+  bmp.set(1, boxH + 1, P.ink);
+  bmp.set(2, boxH + 1, P.ink);
+  bmp.set(1, boxH + 2, P.ink);
+  // Fake words: short dashes separated by 1px gaps.
+  const textLimit = question ? textW - 5 : textW;
+  for (let l = 0; l < lines; l++) {
+    const y = 3 + l * 3 + (lines === 1 ? 1 : 0);
+    const lineW = l === lines - 1 && lines > 1 ? Math.floor(textLimit * (0.4 + rnd(10 + l) * 0.5)) : textLimit;
+    let x = 3;
+    let k = 0;
+    while (x < 3 + lineW) {
+      const word = 2 + Math.floor(rnd(20 + l * 9 + k++) * 4);
+      for (let i = 0; i < word && x + i < 3 + lineW; i++) bmp.set(x + i, y, k % 5 === 3 ? P.coral1 : P.wall1);
+      x += word + 1;
+    }
+  }
+  if (question) paintMatrix(bmp, QUESTION, { k: P.sky1 }, w - 7, Math.floor((boxH - QUESTION.length) / 2) + 0);
+  return bmp;
+}

@@ -2,8 +2,11 @@ import type { ScenePalette } from "../art/palette";
 import { bayer } from "../engine/bitmap";
 import { gridToScreen, worldToScreen, UNIT, type Vec2 } from "../engine/iso";
 import type { Agent } from "../engine/agent";
-import type { RoomLayout } from "../world/layout";
-import { VIEW_H, VIEW_W } from "../world/roomRender";
+import { toCanvas } from "../engine/canvas";
+import { speechBubble } from "../engine/emotes";
+import type { Speech } from "./office";
+import type { WorldLayout } from "../world/layout";
+import { fairySag } from "../world/roomRender";
 
 function hash(n: number): number {
   const s = Math.sin(n * 91.7) * 43758.5453;
@@ -12,55 +15,82 @@ function hash(n: number): number {
 
 /** Cheap living details drawn over the scene: twinkling stars, fairy lights, dust in the moonlight. */
 export class Ambient {
-  private stars: Vec2[] = [];
   private bulbs: Vec2[] = [];
 
   constructor(
-    private layout: RoomLayout,
+    private layout: WorldLayout,
     private origin: Vec2,
     private pal: ScenePalette,
   ) {
-    for (let i = 0; this.stars.length < 14 && i < 500; i++) {
-      const p = { x: Math.floor(hash(i) * VIEW_W), y: Math.floor(hash(i + 50) * VIEW_H) };
-      if (p.y < 34 || p.x < 70 || p.x > VIEW_W - 70) this.stars.push(p);
-    }
-    const W = layout.w * UNIT;
-    for (let x = 5.5; x < W; x += 12) {
-      const sag = 50 - Math.abs(Math.sin((x / 40) * Math.PI)) * 5;
-      const s = worldToScreen(x, 0, sag - 1.5);
-      this.bulbs.push({ x: Math.floor(origin.x + s.x), y: Math.floor(origin.y + s.y) });
+    for (const span of layout.fairyLights) {
+      for (let a = Math.ceil((span.from * UNIT - 5.5) / 12) * 12 + 5.5; a < span.to * UNIT; a += 12) {
+        const z = fairySag(a) - 1.5;
+        const s = span.wall === "NE" ? worldToScreen(a, 0, z) : worldToScreen(0, a, z);
+        this.bulbs.push({ x: Math.floor(origin.x + s.x), y: Math.floor(origin.y + s.y) });
+      }
     }
   }
 
+  /** Twinkling stars in screen space (drawn before the camera transform). */
+  drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, t: number): void {
+    const n = Math.max(10, Math.floor((w * h) / 9000));
+    for (let i = 0; i < n; i++) {
+      const x = Math.floor(hash(i) * w);
+      const y = Math.floor(hash(i + 50) * h);
+      const k = Math.sin(t * (0.6 + hash(i) * 0.8) + i * 2.3);
+      if (k <= 0.55) continue;
+      ctx.fillStyle = this.pal.cream;
+      ctx.fillRect(x, y, 1, 1);
+      if (k > 0.93) {
+        ctx.fillStyle = this.pal.wall2;
+        ctx.fillRect(x - 1, y, 3, 1);
+        ctx.fillRect(x, y - 1, 1, 3);
+        ctx.fillStyle = this.pal.cream;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  /** World-space details (drawn with the camera transform). */
   draw(ctx: CanvasRenderingContext2D, t: number): void {
     const px = (x: number, y: number, c: string) => {
       ctx.fillStyle = c;
       ctx.fillRect(x, y, 1, 1);
     };
-    this.stars.forEach((s, i) => {
-      const k = Math.sin(t * (0.6 + hash(i) * 0.8) + i * 2.3);
-      if (k > 0.55) px(s.x, s.y, this.pal.cream);
-      if (k > 0.93) {
-        px(s.x - 1, s.y, this.pal.wall2);
-        px(s.x + 1, s.y, this.pal.wall2);
-        px(s.x, s.y - 1, this.pal.wall2);
-        px(s.x, s.y + 1, this.pal.wall2);
-      }
-    });
     this.bulbs.forEach((b, i) => {
       if (Math.sin(t * 1.7 + i * 1.9) > 0.8) px(b.x, b.y, this.pal.white);
     });
-    // Dust motes drifting down through the moonbeam.
-    const wx0 = this.layout.window.x0 * UNIT + 4;
-    const wx1 = this.layout.window.x1 * UNIT - 4;
-    for (let i = 0; i < 12; i++) {
-      const y = 3 + hash(i + 7) * 36;
-      const z = 40 - ((t * (1.5 + hash(i) * 1.5) + hash(i + 3) * 40) % 40);
-      const x = wx0 + hash(i + 11) * (wx1 - wx0) + y * 0.35 * (1 - z / 40) + Math.sin(t * 0.7 + i) * 1.5;
-      const s = worldToScreen(x, y, z);
-      const sx = Math.floor(this.origin.x + s.x);
-      const sy = Math.floor(this.origin.y + s.y);
-      if (bayer(i, Math.floor(t * 4)) < 0.7) px(sx, sy, i % 3 ? this.pal.cream : this.pal.butter);
+    // Dust motes drifting down through each moonbeam.
+    this.layout.windows.forEach((w, wi) => {
+      const a0 = w.from * UNIT + 4;
+      const a1 = w.to * UNIT - 4;
+      for (let i = 0; i < 8; i++) {
+        const seed = i + wi * 31;
+        const depth = 3 + hash(seed + 7) * 36;
+        const z = 40 - ((t * (1.5 + hash(seed) * 1.5) + hash(seed + 3) * 40) % 40);
+        const along = a0 + hash(seed + 11) * (a1 - a0) + depth * 0.35 * (1 - z / 40) + Math.sin(t * 0.7 + i) * 1.5;
+        const s = w.wall === "NE" ? worldToScreen(along, depth, z) : worldToScreen(depth, along, z);
+        if (bayer(i, Math.floor(t * 4)) < 0.7) px(Math.floor(this.origin.x + s.x), Math.floor(this.origin.y + s.y), i % 3 ? this.pal.cream : this.pal.butter);
+      }
+    });
+  }
+
+  private bubbleCache = new Map<string, HTMLCanvasElement>();
+
+  /** Speech bubbles with fake text above talking agents. */
+  drawSpeech(ctx: CanvasRenderingContext2D, speeches: readonly Speech[], agents: ReadonlyMap<string, Agent>): void {
+    for (const sp of speeches) {
+      const a = agents.get(sp.agentId);
+      if (!a) continue;
+      const key = `${sp.seed}|${sp.question}`;
+      let c = this.bubbleCache.get(key);
+      if (!c) {
+        c = toCanvas(speechBubble(sp.seed, sp.question));
+        this.bubbleCache.set(key, c);
+      }
+      const s = gridToScreen(a.x, a.y, this.origin);
+      const h = a.sprites.size.head;
+      ctx.drawImage(c, Math.round(s.x + h.x + 3), Math.round(s.y + h.y - c.height - 1));
     }
   }
 

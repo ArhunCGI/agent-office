@@ -3,11 +3,12 @@ import { createRegistry } from "./characters";
 import { variantFor } from "./characters/registry";
 import { ANIM_NAMES, DIRECTIONS, type CharacterDefinition, type CharacterVariant, type SizeClass } from "./characters/types";
 import { pixelCanvas, toCanvas } from "./engine/canvas";
+import { speechBubble } from "./engine/emotes";
 import { frameAt, type SpriteSet } from "./engine/sprite";
 import { WorldView, type Actor } from "./scene/compose";
 import { ALL_FURNITURE } from "./world/furniture";
 import { OFFICE } from "./world/layout";
-import { furnitureSprite, VIEW_H, VIEW_W } from "./world/roomRender";
+import { furnitureSprite } from "./world/roomRender";
 
 const app = document.getElementById("app")!;
 const registry = createRegistry();
@@ -86,22 +87,25 @@ function variantsRow(def: CharacterDefinition): HTMLElement {
 
 function scenePreview(pal: ScenePalette, label: string, def: CharacterDefinition): HTMLElement {
   const wrap = el("div", "cell scene");
-  const { canvas, ctx } = pixelCanvas(VIEW_W, VIEW_H, 2);
   const view = new WorldView(OFFICE, pal);
+  const { canvas, ctx } = pixelCanvas(view.width, view.height, 2);
   const full = registry.sprites(def, variantFor(0, false));
   const minis = [1, 2, 3].map((i) => registry.sprites(def, variantFor(i, true)));
   const robot = registry.sprites(registry.forKind("robot"), variantFor(0, false));
   const actors: Actor[] = [
     { x: 1.5, y: 1.5, sprites: full, anim: "work_type", dir: "NE", elapsed: 0 },
-    { x: 8.5, y: 1.5, sprites: minis[0]!, anim: "work_read", dir: "NE", elapsed: 0 },
-    { x: 1.5, y: 5.5, sprites: minis[1]!, anim: "work_terminal", dir: "NW", elapsed: 0 },
-    { x: 1.5, y: 3.5, sprites: minis[2]!, anim: "waiting", dir: "SE", elapsed: 0 },
-    { x: 8.5, y: 6.5, sprites: robot, anim: "idle", dir: "SW", elapsed: 0 },
-    { x: 5.5, y: 5.5, sprites: full, anim: "walk", dir: "SW", elapsed: 0 },
-    { x: 4.5, y: 7.5, sprites: full, anim: "done", dir: "SE", elapsed: 0 },
+    { x: 16.5, y: 1.5, sprites: minis[0]!, anim: "work_read", dir: "NE", elapsed: 0 },
+    { x: 15.5, y: 5.5, sprites: minis[1]!, anim: "work_terminal", dir: "NW", elapsed: 0 },
+    { x: 5.5, y: 5.5, sprites: minis[2]!, anim: "waiting", dir: "SE", elapsed: 0 },
+    { x: 8.5, y: 13.5, sprites: robot, anim: "idle", dir: "SW", elapsed: 0 },
+    { x: 4.5, y: 9.5, sprites: full, anim: "walk", dir: "SW", elapsed: 0 },
+    { x: 7.5, y: 12.5, sprites: full, anim: "idle", dir: "NW", elapsed: 0 },
+    { x: 12.5, y: 7.5, sprites: full, anim: "done", dir: "SE", elapsed: 0 },
   ];
   tickers.push((t) => {
     for (const a of actors) a.elapsed = a.anim === "done" ? t % 1.6 : t;
+    ctx.fillStyle = pal.night0;
+    ctx.fillRect(0, 0, view.width, view.height);
     view.draw(ctx, t, actors);
   });
   wrap.append(canvas, el("span", undefined, label));
@@ -113,12 +117,9 @@ function scenePreview(pal: ScenePalette, label: string, def: CharacterDefinition
 const claudeA = registry.get("claude")!;
 const claudeB = registry.get("claude-b")!;
 
-const scenes = section("Scène composée", "Aperçu statique (positions figées, animations jouées) — palette A chaude vs B froide, avec Claude A puis B.");
+const scenes = section("Scène composée", "Aperçu statique (positions figées, animations jouées). Retenu : palette A chaude + Claude A. Variante B en dessous pour mémoire.");
 const sRow = el("div", "row");
-sRow.append(
-  scenePreview(SCENE_WARM, "Palette A « chaude » + Claude A", claudeA),
-  scenePreview(SCENE_COOL, "Palette B « froide » + Claude B", claudeB),
-);
+sRow.append(scenePreview(SCENE_WARM, "Retenu — palette A « chaude » + Claude A", claudeA), scenePreview(SCENE_COOL, "Variante — palette B « froide » + Claude B", claudeB));
 scenes.append(sRow);
 
 const pals = section("Palette de scène (24 couleurs)");
@@ -130,6 +131,16 @@ for (const def of registry.all()) {
   s.append(el("h3", undefined, "Sous-agent (~60 %)"), characterTable(def, "mini", 4));
   s.append(el("h3", undefined, "Variantes par instance (teinte, accessoire)"), variantsRow(def));
 }
+
+const talk = section("Bulles de dialogue", "Faux texte généré (seed) : question (avec « ? ») puis réponse. Apparaissent au briefing d'un sous-agent, à son rapport, et quand des agents inactifs discutent.");
+const tRow = el("div", "row");
+for (let i = 0; i < 10; i++) {
+  const b = speechBubble(i, i % 2 === 0);
+  const { canvas, ctx } = pixelCanvas(b.w, b.h, 4);
+  ctx.drawImage(toCanvas(b), 0, 0);
+  tRow.append(canvas);
+}
+talk.append(tRow);
 
 const furn = section("Meubles", "Chaque meuble est dessiné en primitives iso (boîtes, plans) ; les frames animées sont jouées.");
 const fRow = el("div", "row");

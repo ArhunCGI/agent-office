@@ -7,6 +7,33 @@ export interface Grid {
   w: number;
   d: number;
   blocked(x: number, y: number): boolean;
+  /** Optional thin walls between adjacent tiles (room partitions). */
+  wall?(ax: number, ay: number, bx: number, by: number): boolean;
+}
+
+/** True when an agent can step from one tile to an adjacent one. */
+export function canStep(grid: Grid, ax: number, ay: number, bx: number, by: number): boolean {
+  return walkable(grid, bx, by) && !grid.wall?.(ax, ay, bx, by);
+}
+
+/** Path length (in steps) from `from` to every reachable tile; -1 when unreachable. */
+export function distanceMap(grid: Grid, from: Tile): Int32Array {
+  const dist = new Int32Array(grid.w * grid.d).fill(-1);
+  if (from.x < 0 || from.y < 0 || from.x >= grid.w || from.y >= grid.d) return dist;
+  dist[from.y * grid.w + from.x] = 0;
+  const queue: Tile[] = [from];
+  for (let i = 0; i < queue.length; i++) {
+    const t = queue[i]!;
+    const d = dist[t.y * grid.w + t.x]!;
+    for (const n of DIRS) {
+      const nx = t.x + n.x;
+      const ny = t.y + n.y;
+      if (!canStep(grid, t.x, t.y, nx, ny) || dist[ny * grid.w + nx] !== -1) continue;
+      dist[ny * grid.w + nx] = d + 1;
+      queue.push({ x: nx, y: ny });
+    }
+  }
+  return dist;
 }
 
 export function walkable(grid: Grid, x: number, y: number): boolean {
@@ -56,8 +83,8 @@ export function findPath(grid: Grid, from: Tile, to: Tile): Tile[] | null {
     for (const d of DIRS) {
       const nx = cx + d.x;
       const ny = cy + d.y;
-      // Allow stepping off a blocked start tile (e.g. an agent spawned inside a footprint).
-      if (!walkable(grid, nx, ny)) continue;
+      // The start tile itself may be blocked (agent standing in a footprint): only targets are checked.
+      if (!canStep(grid, cx, cy, nx, ny)) continue;
       const nk = key(nx, ny);
       if (closed[nk]) continue;
       const turn = prev >= 0 && (prev % grid.w) - cx !== -d.x ? 0.001 : prev >= 0 && Math.floor(prev / grid.w) - cy !== -d.y ? 0.001 : 0;

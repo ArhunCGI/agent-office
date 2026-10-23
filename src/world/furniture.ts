@@ -303,6 +303,57 @@ export const PLANT_SMALL: FurnitureDef = {
   },
 };
 
-export const ALL_FURNITURE: FurnitureDef[] = [DESK, BOOKSHELF, SERVER_RACK, WHITEBOARD, MAILBOX, COUCH, COFFEE_BAR, FLOOR_LAMP, PLANT_BIG, PLANT_SMALL];
+export const CAFE_TABLE: FurnitureDef = {
+  id: "cafe-table",
+  name: "Table de café",
+  footprint: { w: 1, d: 1 },
+  frames: 1,
+  fps: 1,
+  outline: true,
+  draw(p, pal) {
+    p.box(5, 5, 0, 6, 6, 1, dark(pal));
+    p.box(7, 7, 1, 2, 2, 10, { top: pal.wall2, left: pal.wall2, right: pal.wall0 });
+    // Octagonal-looking top: a plus of two boxes.
+    p.box(2, 4, 11, 12, 8, 2, wood(pal));
+    p.box(4, 2, 11, 8, 12, 2, wood(pal));
+    p.box(5, 6, 13, 3, 3, 3, { top: pal.ink, left: pal.cream, right: pal.wall2 }); // mug
+    p.box(9, 8, 13, 2, 2, 2, { top: pal.ink, left: pal.coral1, right: pal.coral0 }); // cup
+    p.box(8, 4, 13, 4, 3, 1, { top: pal.blush, left: pal.coral1, right: pal.coral0 }); // cake slice
+  },
+};
+
+/** Low wall segment between rooms, one tile long, drawn along +x ("y" partitions) or +y ("x" partitions). */
+export function partitionSegment(axis: "x" | "y"): FurnitureDef {
+  return {
+    id: `partition-${axis}`,
+    name: "Cloison",
+    footprint: { w: 1, d: 1 },
+    frames: 1,
+    fps: 1,
+    outline: true,
+    draw(p, pal) {
+      const c = { top: pal.wall2, left: pal.wall1, right: pal.wall0, edge: pal.cream };
+      if (axis === "y") p.box(0, -1, 0, 16, 2, 15, c);
+      else p.box(-1, 0, 0, 2, 16, 15, c);
+    },
+  };
+}
+
+/** Door post marking an opening in a partition. */
+export function doorPost(): FurnitureDef {
+  return {
+    id: "door-post",
+    name: "Montant de porte",
+    footprint: { w: 1, d: 1 },
+    frames: 1,
+    fps: 1,
+    outline: true,
+    draw(p, pal) {
+      p.box(-1, -1, 0, 2, 2, 22, { top: pal.cream, left: pal.wood2, right: pal.wood1, edge: pal.cream });
+    },
+  };
+}
+
+export const ALL_FURNITURE: FurnitureDef[] = [DESK, BOOKSHELF, SERVER_RACK, WHITEBOARD, MAILBOX, COUCH, COFFEE_BAR, CAFE_TABLE, FLOOR_LAMP, PLANT_BIG, PLANT_SMALL];
 
 export type { Hex };

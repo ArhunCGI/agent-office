@@ -4,8 +4,9 @@ import { bayer, Bitmap } from "../engine/bitmap";
 import { toCanvas } from "../engine/canvas";
 import { depthSort, gridToScreen, type DepthBox } from "../engine/iso";
 import { frameAt, type SpriteSet } from "../engine/sprite";
-import type { RoomLayout } from "../world/layout";
-import { furnitureSprite, renderStaticLayer, roomOrigin } from "../world/roomRender";
+import { doorPost, partitionSegment, type FurnitureDef } from "../world/furniture";
+import type { WorldLayout } from "../world/layout";
+import { furnitureSprite, renderStaticLayer, worldFrame } from "../world/roomRender";
 
 /** Anything with a footprint that must be depth-sorted with the furniture. */
 export interface Actor {
@@ -42,31 +43,73 @@ function shadow(rx: number, ry: number, color: string): HTMLCanvasElement {
   return c;
 }
 
-/** Renders the room: cached static layer, then furniture and actors in painter's order. */
+interface Fixture {
+  def: FurnitureDef;
+  /** Grid point where the sprite's local origin goes. */
+  x: number;
+  y: number;
+  box: DepthBox;
+  /** Phase offset for animated furniture. */
+  phase: number;
+}
+
+/** Furniture placements plus partition segments and door posts, all depth-sorted with the agents. */
+function fixtures(layout: WorldLayout): Fixture[] {
+  const out: Fixture[] = layout.furniture.map((pl) => ({
+    def: pl.def,
+    x: pl.x,
+    y: pl.y,
+    box: { x0: pl.x, x1: pl.x + pl.def.footprint.w, y0: pl.y, y1: pl.y + pl.def.footprint.d },
+    phase: pl.x * 3 + pl.y,
+  }));
+  const post = doorPost();
+  for (const p of layout.partitions) {
+    const seg = partitionSegment(p.axis);
+    const at = (i: number) => (p.axis === "y" ? { x: i, y: p.at } : { x: p.at, y: i });
+    const thin = (i: number, len: number): DepthBox =>
+      p.axis === "y" ? { x0: i, x1: i + len, y0: p.at - 0.05, y1: p.at + 0.05 } : { x0: p.at - 0.05, x1: p.at + 0.05, y0: i, y1: i + len };
+    for (let i = p.from; i < p.to; i++) {
+      if (p.doors.some(([s, e]) => i >= s && i < e)) continue;
+      out.push({ def: seg, ...at(i), box: thin(i, 1), phase: 0 });
+    }
+    for (const [s, e] of p.doors) {
+      for (const i of [s, e]) out.push({ def: post, ...at(i), box: thin(i - 0.05, 0.1), phase: 0 });
+    }
+  }
+  return out;
+}
+
+/**
+ * Renders the world in world-bitmap coordinates (the caller applies the camera transform):
+ * cached static layer, then furniture, partitions and actors in painter's order.
+ */
 export class WorldView {
   readonly origin;
+  readonly width: number;
+  readonly height: number;
   private staticLayer: HTMLCanvasElement;
+  private fixtures: Fixture[];
 
   constructor(
-    readonly layout: RoomLayout,
+    readonly layout: WorldLayout,
     readonly pal: ScenePalette,
   ) {
-    this.origin = roomOrigin(layout);
+    const frame = worldFrame(layout);
+    this.origin = frame.origin;
+    this.width = frame.w;
+    this.height = frame.h;
     this.staticLayer = toCanvas(renderStaticLayer(layout, pal));
+    this.fixtures = fixtures(layout);
   }
 
   draw(ctx: CanvasRenderingContext2D, time: number, actors: readonly Actor[], overlay?: (ctx: CanvasRenderingContext2D) => void): void {
     ctx.drawImage(this.staticLayer, 0, 0);
     const items: Drawable[] = [];
-    for (const pl of this.layout.furniture) {
-      const frame = Math.floor(time * pl.def.fps + pl.x * 3 + pl.y);
-      const spr = furnitureSprite(pl.def, this.pal, frame);
-      const at = gridToScreen(pl.x, pl.y, this.origin);
+    for (const f of this.fixtures) {
+      const spr = furnitureSprite(f.def, this.pal, Math.floor(time * f.def.fps + f.phase));
+      const at = gridToScreen(f.x, f.y, this.origin);
       const canvas = toCanvas(spr.bmp);
-      items.push({
-        box: { x0: pl.x, x1: pl.x + pl.def.footprint.w, y0: pl.y, y1: pl.y + pl.def.footprint.d },
-        draw: (c) => c.drawImage(canvas, Math.round(at.x - spr.origin.x), Math.round(at.y - spr.origin.y)),
-      });
+      items.push({ box: f.box, draw: (c) => c.drawImage(canvas, Math.round(at.x - spr.origin.x), Math.round(at.y - spr.origin.y)) });
     }
     // Shadows go under everything that stands on the floor.
     for (const a of actors) {
