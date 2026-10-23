@@ -139,11 +139,13 @@ Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le 
 
 1. Installer [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver) : télécharger le `.zip` de la dernière release GitHub, double-cliquer sur `WebViewScreenSaver.saver`. Si macOS le bloque : Réglages système → Confidentialité et sécurité → « Ouvrir quand même ». (Le cask Homebrew est désactivé depuis octobre 2026 car il ne passe plus Gatekeeper.)
 
-2. Lancer le serveur en production (idéalement au login via un LaunchAgent) :
+2. Lancer le serveur en production au login, relancé automatiquement s'il s'arrête (LaunchAgent `com.agent-office.server`, logs dans `~/Library/Logs/agent-office.log`) :
 
    ```bash
-   pnpm build && pnpm start
+   scripts/launchagent.sh install
    ```
+
+   `scripts/launchagent.sh status` pour vérifier, `scripts/launchagent.sh uninstall` pour retirer. Relancer `install` après une mise à jour du code (rebuild + rechargement). `DEMO=0 scripts/launchagent.sh install` désactive la démo.
 
 3. Réglages système → Économiseur d'écran → WebViewScreenSaver → Options → URL `http://localhost:4317/`.
 
