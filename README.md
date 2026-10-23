@@ -137,11 +137,7 @@ Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le 
 
 ## Étape suivante : écran de veille macOS
 
-1. Installer [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver) :
-
-   ```bash
-   brew install --cask webviewscreensaver
-   ```
+1. Installer [WebViewScreenSaver](https://github.com/liquidx/webviewscreensaver) : télécharger le `.zip` de la dernière release GitHub, double-cliquer sur `WebViewScreenSaver.saver`. Si macOS le bloque : Réglages système → Confidentialité et sécurité → « Ouvrir quand même ». (Le cask Homebrew est désactivé depuis octobre 2026 car il ne passe plus Gatekeeper.)
 
 2. Lancer le serveur en production (idéalement au login via un LaunchAgent) :
 
