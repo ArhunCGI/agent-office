@@ -1,0 +1,7 @@
+{
+  "default": "claude",
+  "kinds": {
+    "claude": "claude",
+    "robot": "robot"
+  }
+}
