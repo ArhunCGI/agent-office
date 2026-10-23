@@ -1,0 +1,118 @@
+{
+  "summary": {
+    "url": "http://localhost:4317/?mock=stress&n=30",
+    "minutes": 1,
+    "fps": {
+      "avg": 30,
+      "min": 30,
+      "max": 30
+    },
+    "frameMs": {
+      "avg": 0.35,
+      "max": 0.45
+    },
+    "cpuMainThreadPct": {
+      "avg": 3.3,
+      "max": 3.9,
+      "hiddenAvg": 0.17
+    },
+    "heapMB": {
+      "start": 10,
+      "end": 9.2,
+      "max": 13.2
+    },
+    "maxAgents": 31
+  },
+  "samples": [
+    {
+      "t": 10.001,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.45,
+      "agents": 31,
+      "cpuMainThreadPct": 3.8,
+      "scriptPct": 1.8,
+      "heapMB": 10
+    },
+    {
+      "t": 20.003999999999998,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.3,
+      "agents": 31,
+      "cpuMainThreadPct": 3.5,
+      "scriptPct": 1.5,
+      "heapMB": 10.3
+    },
+    {
+      "t": 30.007999999999996,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.27,
+      "agents": 31,
+      "cpuMainThreadPct": 2.3,
+      "scriptPct": 0.9,
+      "heapMB": 13.2
+    },
+    {
+      "t": 40.010999999999996,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.32,
+      "agents": 31,
+      "cpuMainThreadPct": 2.7,
+      "scriptPct": 1.1,
+      "heapMB": 10.7
+    },
+    {
+      "t": 50.01499999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.42,
+      "agents": 31,
+      "cpuMainThreadPct": 3.9,
+      "scriptPct": 1.5,
+      "heapMB": 8.9
+    },
+    {
+      "t": 60.017999999999994,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.32,
+      "agents": 31,
+      "cpuMainThreadPct": 3.6,
+      "scriptPct": 1.4,
+      "heapMB": 9.2
+    },
+    {
+      "t": 70.02099999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.32,
+      "agents": 31,
+      "cpuMainThreadPct": 0.3,
+      "scriptPct": 0.1,
+      "heapMB": 6.5
+    },
+    {
+      "t": 80.02699999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.32,
+      "agents": 31,
+      "cpuMainThreadPct": 0.1,
+      "scriptPct": 0.1,
+      "heapMB": 6.7
+    },
+    {
+      "t": 90.03299999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.32,
+      "agents": 31,
+      "cpuMainThreadPct": 0.1,
+      "scriptPct": 0.1,
+      "heapMB": 6.3
+    }
+  ]
+}

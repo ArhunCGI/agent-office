@@ -5,10 +5,8 @@ import { poseFor, STANDARD_ANIMATIONS, type Pose } from "./pose";
 import type { CharacterDefinition, DrawContext, SizeSpec } from "./types";
 
 /**
- * "Claude" mascot — warm coral, simple and recognisable.
- * Two styles are proposed for the art review (docs/art-direction.md §Variantes):
- *  - A "Clawd": blocky body on four little legs, tall dot eyes (terminal-mascot lineage).
- *  - B "Bloop": chibi round head, tiny body, starburst antenna, big shiny eyes.
+ * "Claude" mascot "Clawd" — warm coral blocky body on four little legs, tall dot eyes
+ * (terminal-mascot lineage). Chosen in the design review over the chibi variant.
  */
 
 const PALETTE = {
@@ -18,14 +16,13 @@ const PALETTE = {
   light: "#eb9673",
   spec: "#f8c9a8",
   eye: "#2b1e2e",
-  glint: "#fff8ea",
   blush: "#f28b8b",
   cover: "#3e5a8c",
   coverDark: "#24305a",
   paper: "#f3e3c3",
   glow: "#6fd0b8",
 };
-const FIXED = ["eye", "glint", "blush", "cover", "coverDark", "paper", "glow"];
+const FIXED = ["eye", "blush", "cover", "coverDark", "paper", "glow"];
 
 const SIZES: Record<"full" | "mini", SizeSpec> = {
   full: { frame: { w: 32, h: 44 }, anchor: { x: 16, y: 42 }, shadow: { rx: 9, ry: 3 }, head: { x: 0, y: -18 } },
@@ -39,7 +36,7 @@ function drawBook(bmp: Bitmap, p: Record<string, string>, cx: number, y: number,
   paintMatrix(bmp, rows, { k: p.coverDark!, b: p.cover!, p: p.paper! }, cx - Math.floor(rows[0]!.length / 2), y - (mini ? 0 : 1));
 }
 
-function drawEyes(bmp: Bitmap, p: Record<string, string>, xs: readonly number[], y: number, h: number, w: number, pose: Pose, big: boolean): void {
+function drawEyes(bmp: Bitmap, p: Record<string, string>, xs: readonly number[], y: number, h: number, w: number, pose: Pose): void {
   for (const x of xs) {
     switch (pose.eyes) {
       case "blink":
@@ -55,11 +52,9 @@ function drawEyes(bmp: Bitmap, p: Record<string, string>, xs: readonly number[],
         break;
       case "up":
         bmp.rect(x, y - 1, w, h, p.eye!);
-        if (big) bmp.set(x, y - 1, p.glint!);
         break;
       default:
         bmp.rect(x, y, w, h, p.eye!);
-        if (big) bmp.set(x, y, p.glint!);
     }
   }
 }
@@ -71,8 +66,6 @@ function drawEmotes(bmp: Bitmap, pose: Pose, headX: number, headTop: number, ctx
     drawSparkle(bmp, Math.round(headX + dx * k), Math.round(headTop + dy * k), big && ctx.size === "full");
   }
 }
-
-// ── Style A: "Clawd" ─────────────────────────────────────────────────────────
 
 const CLAWD = {
   full: { bw: 16, bh: 12, legH: 4, legW: 2, legXs: [1, 5, 9, 13], armW: 2, armH: 4, armY: 5, eyeXs: [-4, 3], eyeY: 3, eyeH: 3, eyeW: 2, blush: true },
@@ -104,7 +97,7 @@ function drawClawd(bmp: Bitmap, ctx: DrawContext): void {
   if (ctx.view === "front") {
     const ey = top + P.eyeY;
     const xs = P.eyeXs.map((dx) => cx + dx);
-    drawEyes(bmp, p, xs, ey, P.eyeH, P.eyeW, pose, false);
+    drawEyes(bmp, p, xs, ey, P.eyeH, P.eyeW, pose);
     if (P.blush && pose.eyes !== "focus") {
       const bw = P.eyeW;
       bmp.rect(xs[0]! - bw, ey + P.eyeH + 1, bw, 1, p.blush!);
@@ -118,90 +111,14 @@ function drawClawd(bmp: Bitmap, ctx: DrawContext): void {
   drawEmotes(bmp, pose, cx, top, ctx);
 }
 
-// ── Style B: "Bloop" ─────────────────────────────────────────────────────────
-
-const BLOOP = {
-  full: { rx: 10, ry: 8, bodyW: 10, bodyH: 6, footW: 3, eyeXs: [-4, 4], eyeH: 4, big: true },
-  mini: { rx: 6, ry: 5, bodyW: 6, bodyH: 4, footW: 2, eyeXs: [-2, 2], eyeH: 2, big: false },
-};
-const STAR_FULL = ["a.a.a", ".aaa.", "aaSaa", ".aaa.", "a.a.a"];
-const STAR_MINI = [".a.", "aSa", ".a."];
-
-function drawBloop(bmp: Bitmap, ctx: DrawContext): void {
-  const S = SIZES[ctx.size];
-  const P = BLOOP[ctx.size];
-  const full = ctx.size === "full";
-  const pose = poseFor(ctx.anim, ctx.frame);
-  const p = ctx.pal;
-  const cx = S.anchor.x;
-  const feetY = S.anchor.y - pose.jump;
-  const footH = full ? 2 : 1;
-  const bodyTop = feetY - footH - P.bodyH + 1 + pose.bob;
-  const footTop = bodyTop + P.bodyH;
-
-  const body = new Mask(bmp.w, bmp.h);
-  body.roundRect(cx - P.bodyW / 2, bodyTop, P.bodyW, P.bodyH, 1);
-  const armW = full ? 2 : 1;
-  body.rect(cx - P.bodyW / 2 - armW, bodyTop + 1 + pose.armL, armW, full ? 2 : 2);
-  body.rect(cx + P.bodyW / 2, bodyTop + 1 + pose.armR, armW, full ? 2 : 2);
-  const footL = feetY - (pose.lift[0] ?? 0);
-  const footR = feetY - (pose.lift[1] ?? 0);
-  for (let y = footTop; y <= footL; y++) body.rect(cx - P.bodyW / 2, y, P.footW, 1);
-  for (let y = footTop; y <= footR; y++) body.rect(cx + P.bodyW / 2 - P.footW, y, P.footW, 1);
-  paintShape(bmp, body, ramp(p));
-
-  const cy = bodyTop + (full ? 2 : 1) - P.ry;
-  const head = new Mask(bmp.w, bmp.h).ellipse(cx, cy, P.rx, P.ry);
-  paintShape(bmp, head, ramp(p));
-  const headTop = Math.round(cy - P.ry);
-  bmp.set(cx - Math.round(P.rx / 2), headTop + 2, p.spec!);
-
-  // Starburst antenna on a little stalk.
-  const sx = cx + 1 + pose.wobble;
-  const star = full ? STAR_FULL : STAR_MINI;
-  const stalk = full ? 2 : 1;
-  for (let i = 1; i <= stalk; i++) bmp.set(cx + 1, headTop - i, p.outline!);
-  const starY = headTop - stalk - star.length;
-  paintMatrix(bmp, star, { a: p.light!, S: p.spec! }, sx - Math.floor(star.length / 2), starY);
-
-  if (ctx.view === "front") {
-    const ey = Math.round(cy) - (full ? 2 : 1);
-    const xs = P.eyeXs.map((dx) => cx + dx - (P.big ? 1 : 0) + 1);
-    drawEyes(bmp, p, xs, ey, P.eyeH, P.big ? 2 : 1, pose, P.big);
-    const my = ey + P.eyeH + (full ? 1 : 0);
-    if (pose.eyes === "happy") bmp.rect(cx, my, full ? 3 : 1, full ? 2 : 1, p.outline!);
-    else bmp.rect(cx + 1, my, full ? 2 : 1, 1, p.outline!);
-    if (full && pose.eyes !== "focus") {
-      bmp.rect(xs[0]! - 2, my, 2, 1, p.blush!);
-      bmp.rect(xs[1]! + 2, my, 2, 1, p.blush!);
-    }
-    if (pose.glow) bmp.rect(cx - 2, bodyTop + 2, 4, 1, p.glow!);
-    if (pose.prop === "book") drawBook(bmp, p, cx, bodyTop, !full, pose.page);
-  }
-  ctx.accessory(bmp, cx - 3 + pose.wobble, headTop);
-  drawEmotes(bmp, pose, cx, starY + 2, ctx);
-}
-
-const base = {
+export const CLAUDE: CharacterDefinition = {
+  id: "claude",
+  name: "Claude « Clawd »",
+  description: "Mascotte corail, corps carré sur quatre petites pattes.",
   palette: PALETTE,
   fixedColors: FIXED,
   sizes: SIZES,
   animations: STANDARD_ANIMATIONS,
-  idlePreferences: { cafe: 5, window: 1 },
-};
-
-export const CLAUDE: CharacterDefinition = {
-  ...base,
-  id: "claude",
-  name: "Claude — A « Clawd »",
-  description: "Mascotte corail, corps carré sur quatre petites pattes.",
   draw: drawClawd,
-};
-
-export const CLAUDE_B: CharacterDefinition = {
-  ...base,
-  id: "claude-b",
-  name: "Claude — B « Bloop »",
-  description: "Mascotte corail chibi, grosse tête ronde et antenne étoile.",
-  draw: drawBloop,
+  idlePreferences: { cafe: 5, window: 1 },
 };

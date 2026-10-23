@@ -119,7 +119,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   createReadStream(file).pipe(res);
 }
 
-const vite = PROD ? null : await (await import("vite")).createServer({ server: { middlewareMode: true }, appType: "mpa", root: ROOT });
+let vite: import("vite").ViteDevServer | null = null;
 
 const server = createServer((req, res) => {
   void api(req, res).then((handled) => {
@@ -129,6 +129,9 @@ const server = createServer((req, res) => {
     vite.middlewares(req, res);
   });
 });
+
+// Vite's HMR socket shares this HTTP server (otherwise the client tries a separate port and errors).
+if (!PROD) vite = await (await import("vite")).createServer({ server: { middlewareMode: true, hmr: { server } }, appType: "mpa", root: ROOT });
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
 const wss = new WebSocketServer({ noServer: true });

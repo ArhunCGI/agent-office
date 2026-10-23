@@ -1,4 +1,4 @@
-import { SCENE_COOL, SCENE_WARM, type ScenePalette } from "./art/palette";
+import { SCENE_WARM, type ScenePalette } from "./art/palette";
 import { createRegistry } from "./characters";
 import { variantFor } from "./characters/registry";
 import { ANIM_NAMES, DIRECTIONS, type CharacterDefinition, type CharacterVariant, type SizeClass } from "./characters/types";
@@ -115,15 +115,14 @@ function scenePreview(pal: ScenePalette, label: string, def: CharacterDefinition
 // ── Page ────────────────────────────────────────────────────────────────────
 
 const claudeA = registry.get("claude")!;
-const claudeB = registry.get("claude-b")!;
 
-const scenes = section("Scène composée", "Aperçu statique (positions figées, animations jouées). Retenu : palette A chaude + Claude A. Variante B en dessous pour mémoire.");
+const scenes = section("Scène composée", "Aperçu statique du bureau (positions figées, animations jouées).");
 const sRow = el("div", "row");
-sRow.append(scenePreview(SCENE_WARM, "Retenu — palette A « chaude » + Claude A", claudeA), scenePreview(SCENE_COOL, "Variante — palette B « froide » + Claude B", claudeB));
+sRow.append(scenePreview(SCENE_WARM, "Open space · Labo · Cafétéria", claudeA));
 scenes.append(sRow);
 
 const pals = section("Palette de scène (24 couleurs)");
-pals.append(palette("A — chaude (défaut)", SCENE_WARM), palette("B — froide", SCENE_COOL));
+pals.append(palette("Palette A — chaude", SCENE_WARM));
 
 for (const def of registry.all()) {
   const s = section(def.name, def.description);

@@ -9,7 +9,7 @@ Un petit diorama de bureau, la nuit, vu en iso 2:1. Ambiance cozy : bois miel, m
 - Les arêtes iso sont rastérisées par « centre de pixel dans le polygone » → escaliers 2:1 parfaits, sans pixel orphelin.
 
 ## Palette de scène (24 couleurs)
-Définie dans `src/art/palette.ts`. Variante **A chaude** (défaut) et **B froide** (seuls murs, bois et fond changent ; les accents sont communs).
+Définie dans `src/art/palette.ts` : **palette A chaude** (prune + miel), retenue en revue de design.
 
 | Rôle | Clés |
 |---|---|
@@ -40,12 +40,23 @@ Les personnages ont **leur propre palette** (définie dans leur fichier), pour r
 - **Animations** (timings partagés dans `src/characters/pose.ts`) : `idle` (respiration + clignement), `walk` (rebond + pattes alternées), `work_type`, `work_read` (livre), `work_terminal` (frappe rapide + reflet), `waiting` (main levée + bulle « ! »), `done` (saut + étincelles), `spawn`/`despawn` (poof générique fourni par le moteur).
 - **Variantes par instance** : rotation de teinte (couleurs marquées `fixedColors` épargnées) + accessoire (pousse, nœud, chapeau, fleur).
 
-## Variantes à valider (galerie)
-1. **Mascotte Claude** — **A « Clawd »** : corps rectangulaire sur quatre pattes, filiation avec la mascotte terminal. **B « Bloop »** : chibi, tête ronde, antenne en étoile façon logo, grands yeux brillants.
-2. **Palette de pièce** — **A chaude** (prune + miel) ou **B froide** (ardoise + chêne fumé).
+## Décisions de la revue de design
+- **Mascotte : Clawd** (corps rectangulaire sur quatre pattes, filiation avec la mascotte terminal).
+- **Palette : A chaude** (prune + miel).
+La variante chibi et la palette froide proposées au jalon 2 ont été retirées du code.
 
 ## Décor
-Pièce 10×9 tuiles, murs arrière NE (fenêtre, guirlande, papier peint à pois) et NW (affiche étoile), bords avant ouverts façon diorama avec tranche de plancher. Postes : 2 bureaux doubles avec écrans (code qui défile), bibliothèque, baies serveur + petit terminal (LED qui clignotent), tableau blanc (organigramme + post-it), coin café (canapé, machine à expresso fumante), boîte aux lettres (drapeau levé quand il y a du courrier), fenêtre (clair de lune). Déco : grande et petite plantes, lampe sur pied, tapis central.
+Monde en L de 24×17 tuiles, trois pièces séparées par des cloisons basses (montants de porte crème) :
+- **Open space** (parquet) : 9 bureaux doubles = 18 places, écrans au code qui défile, fenêtre, boîte aux lettres.
+- **Labo** (carrelage mauve, tapis) : bibliothèques, baies serveur + terminal (LED), tableau blanc, fenêtre.
+- **Cafétéria** (damier bois) : machines à expresso fumantes, tables (mug, gâteau), canapé, fenêtre, guirlande.
+Murs arrière NE et NW (papier peint à pois, affiche étoile, guirlandes), bords avant ouverts façon diorama avec tranche de plancher, flaques de lumière tramées des lampes et clair de lune.
+
+## Lisibilité de l'activité
+- Au travail : à son poste, animation propre à l'outil.
+- En attente de permission : bulle « ! » et main levée.
+- Inactif : va à la cafétéria ; « zzz » après 12 s sans travail.
+- Dialogue : bulles à faux texte (traits gris, un mot corail, « ? » pour une question) au briefing d'un sous-agent, à son rapport, et pendant les pauses café.
 
 ## Ajouter un asset
 - Sprites procéduraux : masques (`Mask`) + `paintShape`, petites matrices de caractères (`paintMatrix`), primitives iso (`IsoPainter.box/planeX/planeY/planeZ`).

@@ -31,7 +31,7 @@ export interface ScenePalette {
   white: Hex; // speculars, glints
 }
 
-/** Variant A — warm plum walls & honey wood (default). */
+/** Warm plum walls & honey wood (palette A, chosen in the design review). */
 export const SCENE_WARM: ScenePalette = {
   night0: "#110d1a",
   night1: "#1f1830",
@@ -58,21 +58,3 @@ export const SCENE_WARM: ScenePalette = {
   sky2: "#5f7fb5",
   white: "#fff8ea",
 };
-
-/** Variant B — cool slate walls & smoked oak, same accents. */
-export const SCENE_COOL: ScenePalette = {
-  ...SCENE_WARM,
-  night0: "#0c1119",
-  night1: "#172230",
-  ink: "#1d2230",
-  wall0: "#263845",
-  wall1: "#34505c",
-  wall2: "#4f7380",
-  wood0: "#3a2f2e",
-  wood1: "#574739",
-  wood2: "#73604c",
-  wood3: "#9a8164",
-};
-
-export const SCENE_PALETTES = { warm: SCENE_WARM, cool: SCENE_COOL } as const;
-export type ScenePaletteId = keyof typeof SCENE_PALETTES;

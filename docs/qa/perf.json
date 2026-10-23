@@ -1,0 +1,358 @@
+{
+  "summary": {
+    "url": "http://localhost:4317/?mock=1",
+    "minutes": 5,
+    "fps": {
+      "avg": 30,
+      "min": 30,
+      "max": 30
+    },
+    "frameMs": {
+      "avg": 0.19,
+      "max": 0.36
+    },
+    "cpuMainThreadPct": {
+      "avg": 2.26,
+      "max": 3.6,
+      "hiddenAvg": 0.03
+    },
+    "heapMB": {
+      "start": 8.6,
+      "end": 5.8,
+      "max": 9.9
+    },
+    "maxAgents": 4
+  },
+  "samples": [
+    {
+      "t": 10.003,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.33,
+      "agents": 1,
+      "cpuMainThreadPct": 2.9,
+      "scriptPct": 0.9,
+      "heapMB": 8.6
+    },
+    {
+      "t": 20.006,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.21,
+      "agents": 4,
+      "cpuMainThreadPct": 2.8,
+      "scriptPct": 0.9,
+      "heapMB": 8.9
+    },
+    {
+      "t": 30.009999999999998,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.24,
+      "agents": 4,
+      "cpuMainThreadPct": 2.8,
+      "scriptPct": 0.9,
+      "heapMB": 8.8
+    },
+    {
+      "t": 40.013,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.27,
+      "agents": 3,
+      "cpuMainThreadPct": 3,
+      "scriptPct": 1,
+      "heapMB": 9.3
+    },
+    {
+      "t": 50.016,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.36,
+      "agents": 1,
+      "cpuMainThreadPct": 3.4,
+      "scriptPct": 1,
+      "heapMB": 9
+    },
+    {
+      "t": 60.019999999999996,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.36,
+      "agents": 1,
+      "cpuMainThreadPct": 2.5,
+      "scriptPct": 0.8,
+      "heapMB": 9.1
+    },
+    {
+      "t": 70.026,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.29,
+      "agents": 1,
+      "cpuMainThreadPct": 3,
+      "scriptPct": 0.9,
+      "heapMB": 9.4
+    },
+    {
+      "t": 80.029,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.22,
+      "agents": 3,
+      "cpuMainThreadPct": 3.3,
+      "scriptPct": 1,
+      "heapMB": 9.1
+    },
+    {
+      "t": 90.03099999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.23,
+      "agents": 3,
+      "cpuMainThreadPct": 3.6,
+      "scriptPct": 1.1,
+      "heapMB": 9.5
+    },
+    {
+      "t": 100.035,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.28,
+      "agents": 1,
+      "cpuMainThreadPct": 3.2,
+      "scriptPct": 1,
+      "heapMB": 9.4
+    },
+    {
+      "t": 110.039,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.12,
+      "agents": 1,
+      "cpuMainThreadPct": 2.2,
+      "scriptPct": 0.6,
+      "heapMB": 9.5
+    },
+    {
+      "t": 120.045,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.15,
+      "agents": 2,
+      "cpuMainThreadPct": 2,
+      "scriptPct": 0.6,
+      "heapMB": 9.6
+    },
+    {
+      "t": 130.051,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.11,
+      "agents": 2,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.3
+    },
+    {
+      "t": 140.05399999999997,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.13,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.7
+    },
+    {
+      "t": 150.05699999999996,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.16,
+      "agents": 3,
+      "cpuMainThreadPct": 2,
+      "scriptPct": 0.6,
+      "heapMB": 9.8
+    },
+    {
+      "t": 160.06099999999995,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.27,
+      "agents": 3,
+      "cpuMainThreadPct": 2.6,
+      "scriptPct": 0.8,
+      "heapMB": 9.1
+    },
+    {
+      "t": 170.06599999999995,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.21,
+      "agents": 3,
+      "cpuMainThreadPct": 1.9,
+      "scriptPct": 0.6,
+      "heapMB": 9.1
+    },
+    {
+      "t": 180.06899999999996,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.11,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.3
+    },
+    {
+      "t": 190.07199999999995,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.15,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.4
+    },
+    {
+      "t": 200.07499999999993,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.13,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.7
+    },
+    {
+      "t": 210.07899999999992,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.13,
+      "agents": 1,
+      "cpuMainThreadPct": 1.6,
+      "scriptPct": 0.5,
+      "heapMB": 9.8
+    },
+    {
+      "t": 220.08199999999994,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.15,
+      "agents": 1,
+      "cpuMainThreadPct": 1.7,
+      "scriptPct": 0.5,
+      "heapMB": 9.9
+    },
+    {
+      "t": 230.08499999999992,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.16,
+      "agents": 1,
+      "cpuMainThreadPct": 1.7,
+      "scriptPct": 0.5,
+      "heapMB": 9.5
+    },
+    {
+      "t": 240.08999999999992,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.16,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 9.6
+    },
+    {
+      "t": 250.09799999999993,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.18,
+      "agents": 3,
+      "cpuMainThreadPct": 2,
+      "scriptPct": 0.5,
+      "heapMB": 5.8
+    },
+    {
+      "t": 260.1019999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 3,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 6.5
+    },
+    {
+      "t": 270.10599999999994,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.17,
+      "agents": 2,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 5.8
+    },
+    {
+      "t": 280.1089999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 1,
+      "cpuMainThreadPct": 1.7,
+      "scriptPct": 0.5,
+      "heapMB": 6
+    },
+    {
+      "t": 290.1119999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.15,
+      "agents": 1,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 6.1
+    },
+    {
+      "t": 300.1149999999999,
+      "phase": "visible",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 2,
+      "cpuMainThreadPct": 1.8,
+      "scriptPct": 0.5,
+      "heapMB": 5.8
+    },
+    {
+      "t": 310.1179999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 2,
+      "cpuMainThreadPct": 0,
+      "scriptPct": 0,
+      "heapMB": 5.9
+    },
+    {
+      "t": 320.1229999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 4,
+      "cpuMainThreadPct": 0.1,
+      "scriptPct": 0.1,
+      "heapMB": 5.9
+    },
+    {
+      "t": 330.1269999999999,
+      "phase": "hidden",
+      "fps": 30,
+      "frameMs": 0.14,
+      "agents": 4,
+      "cpuMainThreadPct": 0,
+      "scriptPct": 0,
+      "heapMB": 5.9
+    }
+  ]
+}

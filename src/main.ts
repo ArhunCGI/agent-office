@@ -1,4 +1,5 @@
-import { SCENE_PALETTES, type ScenePaletteId } from "./art/palette";
+import type { AgentEvent } from "../shared/events";
+import { SCENE_WARM } from "./art/palette";
 import { createRegistry } from "./characters";
 import { toCanvas } from "./engine/canvas";
 import { gridToScreen } from "./engine/iso";
@@ -13,10 +14,10 @@ import { renderBackground, VIEW_H, VIEW_W } from "./world/roomRender";
 
 /**
  * Screensaver entry point: full-window, no cursor, no interaction.
- * Query params: ?mock=1|random|stress[&n=30][&speed=2]  ?palette=warm|cool  ?ws=ws://host/events
+ * Query params: ?mock=1|random|stress[&n=30][&speed=2]  ?ws=ws://host/events  ?freeze=S (QA)
  */
 const params = new URLSearchParams(location.search);
-const pal = SCENE_PALETTES[(params.get("palette") as ScenePaletteId) ?? "warm"] ?? SCENE_PALETTES.warm;
+const pal = SCENE_WARM;
 
 const registry = createRegistry();
 const office = new Office(OFFICE, registry);
@@ -44,9 +45,14 @@ function fit(): void {
 addEventListener("resize", fit);
 fit();
 
+/** QA only: `?freeze=S` stops the clock and incoming events after S seconds (frames keep rendering). */
+const freezeAt = params.has("freeze") ? Number(params.get("freeze")) : Infinity;
+let simTime = 0;
+const frozen = () => simTime >= freezeAt;
+
 const sink: EventSink = {
-  event: (e) => office.apply(e),
-  snapshot: (s) => office.applySnapshot(s),
+  event: (e) => frozen() || office.apply(e),
+  snapshot: (s) => frozen() || office.applySnapshot(s),
 };
 const mock = params.get("mock");
 if (mock) startMock(mock === "1" ? "scripted" : mock, sink, params);
@@ -69,7 +75,10 @@ function focus(): { x: number; y: number } | null {
   return { x: (x / pick.length + view.width / 2) / 2, y: (y / pick.length + view.height / 2) / 2 };
 }
 
-const loop = startLoop((dt, t) => {
+const loop = startLoop((rawDt) => {
+  const dt = frozen() ? 0 : rawDt;
+  simTime += dt;
+  const t = simTime;
   office.update(dt);
   camera.update(dt, vp.w, vp.h, focus());
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -85,4 +94,4 @@ const loop = startLoop((dt, t) => {
 });
 
 // Hook for QA tooling (Playwright): live stats, viewport and the simulation.
-(window as unknown as { __agentOffice: unknown }).__agentOffice = { office, stats: loop.stats, apply: sink.event, viewport: () => vp, camera };
+(window as unknown as { __agentOffice: unknown }).__agentOffice = { office, stats: loop.stats, apply: (e: AgentEvent) => office.apply(e), viewport: () => vp, camera };

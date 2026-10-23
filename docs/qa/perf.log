@@ -1,0 +1,57 @@
+  10s visible fps=30 frame=0.33ms cpu=2.9% heap=8.6MB agents=1
+  20s visible fps=30 frame=0.21ms cpu=2.8% heap=8.9MB agents=4
+  30s visible fps=30 frame=0.24ms cpu=2.8% heap=8.8MB agents=4
+  40s visible fps=30 frame=0.27ms cpu=3% heap=9.3MB agents=3
+  50s visible fps=30 frame=0.36ms cpu=3.4% heap=9MB agents=1
+  60s visible fps=30 frame=0.36ms cpu=2.5% heap=9.1MB agents=1
+  70s visible fps=30 frame=0.29ms cpu=3% heap=9.4MB agents=1
+  80s visible fps=30 frame=0.22ms cpu=3.3% heap=9.1MB agents=3
+  90s visible fps=30 frame=0.23ms cpu=3.6% heap=9.5MB agents=3
+ 100s visible fps=30 frame=0.28ms cpu=3.2% heap=9.4MB agents=1
+ 110s visible fps=30 frame=0.12ms cpu=2.2% heap=9.5MB agents=1
+ 120s visible fps=30 frame=0.15ms cpu=2% heap=9.6MB agents=2
+ 130s visible fps=30 frame=0.11ms cpu=1.8% heap=9.3MB agents=2
+ 140s visible fps=30 frame=0.13ms cpu=1.8% heap=9.7MB agents=1
+ 150s visible fps=30 frame=0.16ms cpu=2% heap=9.8MB agents=3
+ 160s visible fps=30 frame=0.27ms cpu=2.6% heap=9.1MB agents=3
+ 170s visible fps=30 frame=0.21ms cpu=1.9% heap=9.1MB agents=3
+ 180s visible fps=30 frame=0.11ms cpu=1.8% heap=9.3MB agents=1
+ 190s visible fps=30 frame=0.15ms cpu=1.8% heap=9.4MB agents=1
+ 200s visible fps=30 frame=0.13ms cpu=1.8% heap=9.7MB agents=1
+ 210s visible fps=30 frame=0.13ms cpu=1.6% heap=9.8MB agents=1
+ 220s visible fps=30 frame=0.15ms cpu=1.7% heap=9.9MB agents=1
+ 230s visible fps=30 frame=0.16ms cpu=1.7% heap=9.5MB agents=1
+ 240s visible fps=30 frame=0.16ms cpu=1.8% heap=9.6MB agents=1
+ 250s visible fps=30 frame=0.18ms cpu=2% heap=5.8MB agents=3
+ 260s visible fps=30 frame=0.14ms cpu=1.8% heap=6.5MB agents=3
+ 270s visible fps=30 frame=0.17ms cpu=1.8% heap=5.8MB agents=2
+ 280s visible fps=30 frame=0.14ms cpu=1.7% heap=6MB agents=1
+ 290s visible fps=30 frame=0.15ms cpu=1.8% heap=6.1MB agents=1
+ 300s visible fps=30 frame=0.14ms cpu=1.8% heap=5.8MB agents=2
+ 310s hidden  fps=30 frame=0.14ms cpu=0% heap=5.9MB agents=2
+ 320s hidden  fps=30 frame=0.14ms cpu=0.1% heap=5.9MB agents=4
+ 330s hidden  fps=30 frame=0.14ms cpu=0% heap=5.9MB agents=4
+{
+  "url": "http://localhost:4317/?mock=1",
+  "minutes": 5,
+  "fps": {
+    "avg": 30,
+    "min": 30,
+    "max": 30
+  },
+  "frameMs": {
+    "avg": 0.19,
+    "max": 0.36
+  },
+  "cpuMainThreadPct": {
+    "avg": 2.26,
+    "max": 3.6,
+    "hiddenAvg": 0.03
+  },
+  "heapMB": {
+    "start": 8.6,
+    "end": 5.8,
+    "max": 9.9
+  },
+  "maxAgents": 4
+}
