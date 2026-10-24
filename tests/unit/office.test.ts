@@ -71,6 +71,29 @@ describe("agent state machine", () => {
     expect(agent("a").state).toBe("working");
   });
 
+  it("shows a question-mark wait for idle_prompt and resumes on the next tool", () => {
+    apply({ type: "agent_spawn", agentId: "a", kind: "claude" });
+    run(1);
+    apply({ type: "agent_waiting", agentId: "a", need: "input" });
+    run(2);
+    expect(agent("a").state).toBe("waiting");
+    expect(agent("a").anim).toBe("waiting_input");
+    apply({ type: "agent_tool", agentId: "a", tool: "Bash" });
+    run(15);
+    expect(agent("a").state).toBe("working");
+  });
+
+  it("falls asleep after a long rest", () => {
+    apply({ type: "agent_spawn", agentId: "a", kind: "claude" });
+    run(120);
+    const seen = new Set<string>();
+    for (let i = 0; i < 600; i++) {
+      run(0.5);
+      seen.add(agent("a").anim);
+    }
+    expect(seen.has("sleep")).toBe(true);
+  });
+
   it("celebrates done once, even when done arrives twice", () => {
     apply({ type: "agent_spawn", agentId: "a", kind: "claude" });
     run(1);

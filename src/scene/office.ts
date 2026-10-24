@@ -27,6 +27,9 @@ export interface OfficeOptions {
   toolConfig?: ToolStationConfig;
 }
 
+/** Seconds without any event after which an idle agent falls asleep. */
+const SLEEP_AFTER = 25;
+
 const tkey = (t: Tile) => `${t.x},${t.y}`;
 
 /** A speech bubble with fake text shown above an agent. */
@@ -111,7 +114,7 @@ export class Office {
         a.state = "waiting";
         a.stopAtNextTile(() => {
           a.dir = towardViewer(a.dir);
-          a.setAnim("waiting");
+          a.setAnim(e.need === "input" ? "waiting_input" : "waiting");
         });
         break;
       case "agent_done":
@@ -241,8 +244,10 @@ export class Office {
 
   private enterIdle(a: Agent, pause: number): void {
     a.state = "idle";
-    a.setAnim("idle");
-    a.timer = pause;
+    // Long without work: doze off where it stands (it wakes up for the next wander or event).
+    const asleep = a.restTime > SLEEP_AFTER && pause > 3;
+    a.setAnim(asleep ? "sleep" : "idle");
+    a.timer = asleep ? pause * 3 : pause;
   }
 
   private wander(a: Agent): void {

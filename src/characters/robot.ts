@@ -1,5 +1,5 @@
 import type { Bitmap } from "../engine/bitmap";
-import { drawAlertBubble, drawSparkle } from "../engine/emotes";
+import { drawAlertBubble, drawAskBubble, drawSleepZ, drawSparkle } from "../engine/emotes";
 import { Mask, paintShape } from "../engine/shape";
 import { poseFor, STANDARD_ANIMATIONS } from "./pose";
 import type { CharacterDefinition, DrawContext, SizeSpec } from "./types";
@@ -75,7 +75,7 @@ function draw(bmp: Bitmap, ctx: DrawContext): void {
   // Antenna with blinking bulb.
   const ax = cx + 1 + pose.wobble;
   for (let i = 1; i <= D.antenna; i++) bmp.set(cx + 1, headTop - i, p.steel1!);
-  const lit = ctx.anim === "waiting" || ctx.anim === "done" || ctx.frame % 4 < 2;
+  const lit = ctx.anim === "waiting" || ctx.anim === "waiting_input" || ctx.anim === "done" || ctx.frame % 4 < 2;
   bmp.rect(ax - (full ? 1 : 0), headTop - D.antenna - (full ? 2 : 1), full ? 2 : 1, full ? 2 : 1, lit ? p.bulbOn! : p.bulbOff!);
 
   if (ctx.view === "front") {
@@ -108,7 +108,8 @@ function draw(bmp: Bitmap, ctx: DrawContext): void {
   }
   ctx.accessory(bmp, cx - 3 + pose.wobble, headTop - 1);
 
-  if (pose.bubble !== null) drawAlertBubble(bmp, cx + (full ? 7 : 5), headTop - 2 + pose.bubble, ctx.size);
+  if (pose.bubble !== null) (pose.bubbleKind === "ask" ? drawAskBubble : drawAlertBubble)(bmp, cx + (full ? 7 : 5), headTop - 2 + pose.bubble, ctx.size);
+  if (pose.zzz !== null) drawSleepZ(bmp, cx + (full ? 5 : 3), headTop, pose.zzz, ctx.size);
   for (const [dx, dy, big] of pose.sparkles) {
     const k = full ? 1 : 0.6;
     drawSparkle(bmp, Math.round(cx + dx * k), Math.round(headTop + dy * k), big && full);

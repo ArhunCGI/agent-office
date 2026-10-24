@@ -28,6 +28,37 @@ export function drawAlertBubble(bmp: Bitmap, x: number, y: number, size: SizeCla
   paintMatrix(bmp, rows, { ...EMOTE_COLORS, K: P.ink }, x - 3, y - rows.length + 1);
 }
 
+const BUBBLE_ASK = [
+  ".kkkkk.",
+  "kcccccK",
+  "kcbbbck",
+  "kccccbk",
+  "kcccbck",
+  "kccbcck",
+  "kcccccK",
+  "kccbcck",
+  "kcccccK",
+  ".kkckk.",
+  "...kk..",
+];
+const BUBBLE_ASK_MINI = [".kkkk.", "kcbbck", "kccbck", "kcbcck", "kcccck", "kcbcck", ".kkck.", "..kk..", "..k..."];
+
+/** Blue "?" speech bubble (agent idle, waiting for the next prompt), tail at (x, y). */
+export function drawAskBubble(bmp: Bitmap, x: number, y: number, size: SizeClass): void {
+  const rows = size === "full" ? BUBBLE_ASK : BUBBLE_ASK_MINI;
+  paintMatrix(bmp, rows, { ...EMOTE_COLORS, K: P.ink, b: P.sky1 }, x - 3, y - rows.length + 1);
+}
+
+const Z_BIG = ["zzz", "..z", ".z.", "z..", "zzz"];
+const Z_SMALL = ["zz", ".z", "zz"];
+
+/** Floating "z" for sleeping agents; `phase` 0..2 drifts it upward and up-right. */
+export function drawSleepZ(bmp: Bitmap, x: number, y: number, phase: number, size: SizeClass): void {
+  const rows = size === "full" ? Z_BIG : Z_SMALL;
+  const lift = phase * (size === "full" ? 3 : 2);
+  paintMatrix(bmp, rows, { z: P.white }, x + phase * 2, y - rows.length - lift);
+}
+
 const SPARKLE_BIG = ["..b..", "..c..", "bcwcb", "..c..", "..b.."];
 const SPARKLE_SMALL = [".b.", "bwb", ".b."];
 

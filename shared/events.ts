@@ -21,7 +21,8 @@ export const AgentSpawnSchema = z.object({
   label: text,
 });
 export const AgentToolSchema = z.object({ type: z.literal("agent_tool"), agentId: id, tool: z.string().min(1).max(200), summary: text });
-export const AgentWaitingSchema = z.object({ type: z.literal("agent_waiting"), agentId: id, reason: text });
+/** `need`: "permission" (default, red "!") = blocked on an approval; "input" (blue "?") = turn finished, waiting for the next prompt. */
+export const AgentWaitingSchema = z.object({ type: z.literal("agent_waiting"), agentId: id, reason: text, need: z.enum(["permission", "input"]).optional() });
 export const AgentDoneSchema = z.object({ type: z.literal("agent_done"), agentId: id });
 export const AgentDespawnSchema = z.object({ type: z.literal("agent_despawn"), agentId: id });
 

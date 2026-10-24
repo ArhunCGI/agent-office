@@ -95,6 +95,10 @@ describe("hook adapter", () => {
     h.handle({ hook_event_name: "PreToolUse", session_id: s, tool_name: "Task", tool_use_id: "tu9", tool_input: { description: "x" } });
     expect(h.handle({ hook_event_name: "SubagentStart", session_id: s, agent_id: "ag1", agent_type: "Explore" })).toEqual([]);
     expect(h.handle({ hook_event_name: "PreToolUse", session_id: s, agent_id: "ag1", tool_name: "Read" })).toEqual([{ type: "agent_tool", agentId: `${s}/tu9`, tool: "Read", summary: undefined }]);
+    expect(h.handle({ hook_event_name: "Notification", session_id: s, notification_type: "idle_prompt", message: "Claude is waiting for your input" })).toEqual([
+      { type: "agent_waiting", agentId: s, reason: "Claude is waiting for your input", need: "input" },
+    ]);
+    expect(h.handle({ hook_event_name: "UserPromptSubmit", session_id: s })).toEqual([{ type: "agent_tool", agentId: s, tool: "UserPromptSubmit" }]);
     expect(h.handle({ hook_event_name: "PermissionRequest", session_id: s, tool_name: "Bash" })).toEqual([{ type: "agent_waiting", agentId: s, reason: undefined }]);
     expect(h.handle({ hook_event_name: "PostToolUse", session_id: s, tool_name: "Bash", tool_input: { command: "ls" } })).toEqual([{ type: "agent_tool", agentId: s, tool: "Bash", summary: "ls" }]);
     // A sub-agent started without a Task call still shows up.

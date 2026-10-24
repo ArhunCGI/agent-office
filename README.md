@@ -6,8 +6,28 @@
 
 - **Monde en L** : open space (18 bureaux), labo (bibliothèque, serveurs, tableau blanc, fenêtre), cafétéria (café, tables, canapé), séparés par des cloisons basses avec portes.
 - **Mascotte « Clawd »** (corail) ; sous-agents en version mini, teinte + accessoire par instance ; 2ᵉ personnage de démo « Bolt » (robot bleu).
-- **Lisible d'un coup d'œil** : au poste et animé = travaille ; bulle « ! » = attend une permission ; à la cafétéria avec « zzz » = inactif ; bulles à faux texte = discussion (briefing, rapport, pause café).
+- **Lisible d'un coup d'œil** : chaque état d'une session a son propre sprite (voir [États des agents](#états-des-agents)) ; bulles à faux texte = discussion (briefing, rapport, pause café).
 - **Rendu** : sprites 100 % procéduraux (aucune image), palette de 24 couleurs, scale entier (pixels nets), 30 fps max, zéro rendu quand l'écran est caché.
+
+## États des agents
+
+![Scène avec des agents dans différents états](docs/screenshots/states-scene.png)
+
+| État | Ce qu'on voit | Déclencheur (hook Claude Code) |
+|---|---|---|
+| Travaille | à un poste, animation selon l'outil (frappe, lecture, terminal…) | `PreToolUse` |
+| Bloqué : permission | bulle **« ! » rouge**, le robot allume son ampoule | `PermissionRequest`, `Notification` (permission) |
+| Attend ta consigne | bulle **« ? » bleue** | `Notification` de type `idle_prompt` |
+| Inactif | se promène, discute, va à la cafétéria ; après ~25 s de repos, il **s'endort** (« z » qui monte) | aucun événement |
+| Terminé | petit saut de victoire avec étincelles, puis pause | `Stop` |
+| Sous-agent | version mini, teinte propre, relié à son parent | `Task` / `Agent`, `SubagentStart` |
+| Apparition / départ | nuage de pixels | `SessionStart` / `SessionEnd` |
+
+Un agent en attente (« ! » ou « ? ») reprend le travail dès son prochain outil ou dès que tu envoies un nouveau prompt.
+
+![Tous les états, dans les 4 directions](docs/screenshots/states-sprites.png)
+
+La galerie (`/gallery`) montre chaque animation dans les 4 directions, pour les deux personnages et leur version mini.
 
 ## Lancer
 
@@ -65,11 +85,12 @@ La simulation (`src/scene/office.ts`) est de la logique pure, testée avec une h
 type AgentEvent =
   | { type: "agent_spawn"; agentId: string; parentId?: string; kind: AgentKind; label?: string }
   | { type: "agent_tool"; agentId: string; tool: string; summary?: string }
-  | { type: "agent_waiting"; agentId: string; reason?: string }
+  | { type: "agent_waiting"; agentId: string; reason?: string; need?: "permission" | "input" }
   | { type: "agent_done"; agentId: string }
   | { type: "agent_despawn"; agentId: string };
 ```
 
+- `agent_waiting` : `need: "permission"` (par défaut, « ! » rouge) ou `"input"` (« ? » bleu, l'agent attend ton prochain message).
 - `AgentKind` : `"claude"` aujourd'hui (et `"robot"` pour la démo). N'importe quelle chaîne est acceptée ; un type inconnu prend le personnage par défaut.
 - Envoi direct : `POST /events` avec un `AgentEvent` (ou un tableau). Réponse `202`, ou `400` si invalide.
 - Côté écran, le WebSocket `ws://host/events` reçoit les `AgentEvent`, et d'abord un `{ type: "snapshot", agents: [...] }` qui resynchronise l'écran après une (re)connexion. La reconnexion est automatique (1 s → 10 s).
@@ -105,10 +126,10 @@ Le serveur accepte déjà les payloads bruts des hooks sur `POST /hook` (corresp
 
 | Hook | Effet à l'écran |
 |---|---|
-| `SessionStart`, `UserPromptSubmit` | la session apparaît (bureau attitré) |
+| `SessionStart`, `UserPromptSubmit` | la session apparaît (bureau attitré) ; `UserPromptSubmit` sort aussi un agent de l'attente |
 | `PreToolUse` | l'agent va au poste de l'outil ; `Task` / `Agent` fait apparaître un sous-agent |
 | `PostToolUse` (Task), `SubagentStop` | le sous-agent revient faire son rapport puis disparaît |
-| `PermissionRequest`, `Notification` | bulle « ! » (permission demandée) ; le `PostToolUse` suivant le remet au travail |
+| `PermissionRequest`, `Notification` | bulle « ! » (permission demandée) ; `Notification` de type `idle_prompt` : bulle « ? » (attend ta consigne). L'outil ou le prompt suivant le remet au travail |
 | `SubagentStart` | associe l'`agent_id` du sous-agent (ses outils s'affichent sur lui) |
 | `Stop` | petit saut de victoire, puis pause café |
 | `SessionEnd` | la session disparaît |
@@ -152,17 +173,19 @@ Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le 
    scripts/launchagent.sh install
    ```
 
-   `scripts/launchagent.sh status` / `uninstall` ; relancer `install` après une mise à jour du code. `DEMO=0 scripts/launchagent.sh install` désactive la démo.
+   `scripts/launchagent.sh status` / `uninstall` ; relancer `install` après une mise à jour du code (si le `bootstrap` échoue juste après le `bootout`, relancer la commande). `DEMO=0 scripts/launchagent.sh install` désactive la démo.
 
-2. Installer l'économiseur natif **Agent Office** (app extension, voir [`saver/README.md`](saver/README.md)) :
+2. Installer l'économiseur (recommandé : le `.saver` léger, testé sur macOS 26) :
 
    ```bash
-   saver/install.sh
+   saver/legacy/build.sh
    ```
 
-3. Réglages Système → Fond d'écran → Économiseur d'écran → **Agent Office**.
+3. Réglages Système → Fond d'écran → Économiseur d'écran → **AgentOffice** (sans espace). Après une reconstruction : `killall legacyScreenSaver ScreenSaverEngine`.
 
-Pourquoi pas WebViewScreenSaver : sur macOS 26, les `.saver` tiers passent par `legacyScreenSaver`, qui retombe sur Hello en plein écran (issue liquidx/webviewscreensaver#97, sans correctif). L'économiseur `saver/` utilise le même mécanisme que les économiseurs Apple.
+Le `.saver` n'embarque qu'un `WKWebView` qui affiche `http://localhost:4317/` : les changements de l'interface (`pnpm build`) sont pris en compte sans le reconstruire. Il neutralise la détection d'occlusion de WebKit, sinon la page est considérée comme cachée et clignote / devient noire, et pilote les frames à la main (voir [`saver/README.md`](saver/README.md)).
+
+Il existe aussi une variante app extension (`saver/install.sh`, « Agent Office » avec espace), plus proche des économiseurs Apple mais moins testée.
 
 **Mac gérés par MDM** : si un profil impose l'économiseur (`moduleName` dans `/Library/Managed Preferences/com.apple.screensaver.plist`), macOS lance celui-ci en plein écran quel que soit le choix dans les Réglages. Il faut demander à l'administrateur de retirer cette clé.
 
@@ -174,4 +197,20 @@ La page est déjà en mode écran de veille : plein écran, curseur masqué, auc
 - `docs/qa-report.md` : critères d'acceptation, résultats des tests, mesures de performance, bugs trouvés et corrigés.
 - `docs/screenshots/` : captures de chaque jalon et de la QA (4 résolutions).
 
-Hors périmètre de ce prototype : vrais hooks installés, packaging `.saver`, interactions souris, sons, persistance, authentification.
+## Contribuer
+
+Le projet est ouvert à tous : issues et pull requests bienvenues. Pistes faciles : un nouveau personnage (`src/characters/`), un meuble ou une pièce (`src/world/`), de nouveaux états visuels, la prise en charge d'autres agents de code (envoie des `AgentEvent` sur `POST /events`).
+
+Avant d'ouvrir une PR :
+
+```bash
+pnpm typecheck && pnpm test
+```
+
+et vérifier le rendu dans la galerie (`pnpm dev` puis `/gallery`) ; `pnpm test:visual` lance les tests navigateur.
+
+Hors périmètre actuel : interactions souris, sons, persistance, authentification (le serveur n'a pas d'authentification : ne l'expose pas sur Internet).
+
+## Licence
+
+[MIT](LICENSE). Le dossier `saver/` reprend un modèle d'économiseur sous licence MIT (voir `saver/LICENSE`).

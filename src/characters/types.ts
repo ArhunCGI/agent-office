@@ -1,8 +1,8 @@
 import type { Bitmap } from "../engine/bitmap";
 import type { Hex } from "../engine/color";
 
-export type AnimName = "idle" | "walk" | "work_type" | "work_read" | "work_terminal" | "waiting" | "done" | "spawn" | "despawn";
-export const ANIM_NAMES: readonly AnimName[] = ["idle", "walk", "work_type", "work_read", "work_terminal", "waiting", "done", "spawn", "despawn"];
+export type AnimName = "idle" | "walk" | "work_type" | "work_read" | "work_terminal" | "waiting" | "waiting_input" | "sleep" | "done" | "spawn" | "despawn";
+export const ANIM_NAMES: readonly AnimName[] = ["idle", "walk", "work_type", "work_read", "work_terminal", "waiting", "waiting_input", "sleep", "done", "spawn", "despawn"];
 
 /** Iso facing. SE/SW show the face, NE/NW the back; SW and NW are mirrors produced by the engine. */
 export type Direction = "SE" | "SW" | "NE" | "NW";

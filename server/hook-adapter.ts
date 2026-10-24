@@ -10,7 +10,7 @@ import { parseEvent, type AgentEvent } from "../shared/events";
  * | PreToolUse        | agent_tool; for Task/Agent also agent_spawn of a sub-agent             |
  * | PostToolUse(…)    | resumes work after a permission prompt; Task/Agent: closes sub-agent   |
  * | PermissionRequest | agent_waiting ("!" bubble)                                             |
- * | Notification      | agent_waiting (permission prompt / waiting for input)                  |
+ * | Notification      | agent_waiting; idle_prompt → need "input" ("?" bubble), else "!"       |
  * | Stop, StopFailure | agent_done                                                             |
  * | SubagentStart     | binds the sub-agent's `agent_id` (spawns one if no Task call announced it) |
  * | SubagentStop      | agent_done + agent_despawn of that sub-agent (by agent_id, else latest)|
@@ -28,6 +28,7 @@ export interface HookPayload {
   tool_input?: Record<string, unknown>;
   tool_use_id?: string;
   message?: string;
+  notification_type?: string;
   agent_id?: string;
   agent_type?: string;
   /** Not sent by Claude Code: lets other tools reuse this endpoint with their own character (e.g. "codex"). */
@@ -71,7 +72,10 @@ export class HookAdapter {
 
     switch (p.hook_event_name) {
       case "SessionStart":
+        break;
       case "UserPromptSubmit":
+        // A new prompt ends the "?" wait: send the agent back to work.
+        if (session.waiting.delete(main)) out.push({ type: "agent_tool", agentId: main, tool: "UserPromptSubmit" });
         break;
       case "PreToolUse": {
         if (!p.tool_name) break;
@@ -111,7 +115,7 @@ export class HookAdapter {
       case "PermissionRequest":
       case "Notification":
         session.waiting.add(actor);
-        out.push({ type: "agent_waiting", agentId: actor, reason: p.message?.slice(0, 200) });
+        out.push({ type: "agent_waiting", agentId: actor, reason: p.message?.slice(0, 200), ...(p.notification_type === "idle_prompt" ? { need: "input" as const } : {}) });
         break;
       case "Stop":
       case "StopFailure":
