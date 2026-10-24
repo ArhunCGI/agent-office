@@ -20,6 +20,17 @@ Désinstaller : `saver/install.sh uninstall`.
 
 URL personnalisée (par défaut `http://localhost:4317/`) : clé `url` du domaine `dev.agent-office.saver.Extension` (lu via `ScreenSaverDefaults` depuis le conteneur sandbox de l'extension).
 
+## Variante `.saver` légère (testée, fonctionne)
+
+`saver/legacy/build.sh` compile un `.saver` minimal (`AgentOffice.saver`, URL codée en dur dans `saver/legacy/AgentOfficeLegacyView.swift`) dans `~/Library/Screen Savers/` ; il s'affiche en plein écran sans clignoter sur macOS 26. Sélectionner **AgentOffice** (sans espace) dans les Réglages, après `killall legacyScreenSaver` si besoin.
+
+## Clignotement / écran noir dans un WKWebView d'économiseur
+
+Dans un économiseur, WebKit croit la fenêtre masquée : `document.hidden` reste vrai, `requestAnimationFrame` s'arrête et le contenu est caché (`hideContentUntilPendingUpdate`), même si le JS tourne. Contournement appliqué dans les deux vues :
+
+- `windowOcclusionDetectionEnabled = false` sur le `WKWebView` et `pageVisibilityBasedProcessSuppressionEnabled = false` (API privées, via KVC) ;
+- script injecté qui force `document.hidden = false` et `window.__forceManualFrames`, puis un `CADisplayLink` qui appelle `window.__agentOfficeManualTick()` (voir `src/engine/loop.ts`).
+
 ## Limites
 
 - **API privée** : Apple n'a pas documenté ce point d'extension pour les tiers ; une mise à jour de macOS peut le casser. Distribution hors App Store uniquement ; pour d'autres Mac, signer avec un Developer ID et notariser.

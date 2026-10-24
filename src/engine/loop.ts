@@ -7,12 +7,29 @@ export interface LoopStats {
 }
 
 /**
+ * Set by the macOS screensaver host before this module runs: WKWebView there is never the
+ * key/active window, so requestAnimationFrame is throttled to a near-stop by WebKit's own
+ * (JS-invisible) page-visibility machinery, regardless of what `document.hidden` reports —
+ * and so is `setInterval`, just less severely (choppy rather than fully stopped). In that
+ * case the host drives frames itself by calling `window.__agentOfficeManualTick(now)`
+ * through `evaluateJavaScript`, which runs regardless of the page's own throttled timers
+ * since it isn't scheduled through them.
+ */
+declare global {
+  interface Window {
+    __forceManualFrames?: boolean;
+    __agentOfficeManualTick?: (now: number) => void;
+  }
+}
+
+/**
  * requestAnimationFrame loop capped at `fps`, fully stopped while the document is hidden
  * (no rAF scheduled at all), with a clamped dt so a resumed tab doesn't fast-forward.
  */
 export function startLoop(frame: (dt: number, t: number) => void, fps = 30): { stop: () => void; stats: LoopStats } {
   const stats: LoopStats = { fps: 0, frames: 0, frameMs: 0 };
   const interval = 1000 / fps;
+  const manual = window.__forceManualFrames === true;
   let raf = 0;
   let last = -1;
   let acc = 0;
@@ -21,8 +38,7 @@ export function startLoop(frame: (dt: number, t: number) => void, fps = 30): { s
   let windowMs = 0;
   let t = 0;
 
-  const tick = (now: number) => {
-    raf = requestAnimationFrame(tick);
+  const advance = (now: number) => {
     if (last < 0) {
       last = now;
       windowStart = now;
@@ -48,17 +64,25 @@ export function startLoop(frame: (dt: number, t: number) => void, fps = 30): { s
       windowMs = 0;
     }
   };
+  const rafTick = (now: number) => {
+    raf = requestAnimationFrame(rafTick);
+    advance(now);
+  };
   const start = () => {
+    if (manual) return;
     if (!raf) {
       last = -1;
       acc = 0;
-      raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(rafTick);
     }
   };
   const pause = () => {
     cancelAnimationFrame(raf);
     raf = 0;
   };
+  if (manual) {
+    window.__agentOfficeManualTick = advance;
+  }
   const onVisibility = () => (document.hidden ? pause() : start());
   document.addEventListener("visibilitychange", onVisibility);
   if (!document.hidden) start();
@@ -67,6 +91,7 @@ export function startLoop(frame: (dt: number, t: number) => void, fps = 30): { s
     stop: () => {
       pause();
       document.removeEventListener("visibilitychange", onVisibility);
+      if (manual) delete window.__agentOfficeManualTick;
     },
   };
 }
