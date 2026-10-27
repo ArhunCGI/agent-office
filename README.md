@@ -1,35 +1,35 @@
 # Agent Office
 
-Écran de veille macOS en pixel art isométrique : un petit bureau de nuit où chaque session Claude Code (et chaque sous-agent) est un personnage qui se déplace vers le poste correspondant à l'outil qu'il utilise.
+An isometric pixel-art macOS screen saver: a small office at night where every Claude Code session (and every sub-agent) is a character walking to the workstation that matches the tool it is using.
 
-![Vue d'ensemble](docs/screenshots/m3b-world-overview.png)
+![Overview](docs/screenshots/m3b-world-overview.png)
 
-- **Monde en L** : open space (18 bureaux), labo (bibliothèque, serveurs, tableau blanc, fenêtre), cafétéria (café, tables, canapé), séparés par des cloisons basses avec portes.
-- **Mascotte « Clawd »** (corail) ; sous-agents en version mini, teinte + accessoire par instance ; 2ᵉ personnage de démo « Bolt » (robot bleu).
-- **Lisible d'un coup d'œil** : chaque état d'une session a son propre sprite (voir [États des agents](#états-des-agents)) ; bulles à faux texte = discussion (briefing, rapport, pause café).
-- **Rendu** : sprites 100 % procéduraux (aucune image), palette de 24 couleurs, scale entier (pixels nets), 30 fps max, zéro rendu quand l'écran est caché.
+- **L-shaped world**: open space (18 desks), lab (bookshelf, servers, whiteboard, window), cafeteria (coffee, tables, sofa), separated by low partitions with doors.
+- **"Clawd" mascot** (coral); sub-agents as a mini version, with a tint + accessory per instance; a 2nd demo character, "Bolt" (blue robot).
+- **Readable at a glance**: each session state has its own sprite (see [Agent states](#agent-states)); fake-text bubbles = conversation (briefing, report, coffee break).
+- **Rendering**: 100% procedural sprites (no images), 24-color palette, integer scale (crisp pixels), 30 fps max, zero rendering when the screen is hidden.
 
-## États des agents
+## Agent states
 
-![Scène avec des agents dans différents états](docs/screenshots/states-scene.png)
+![Scene with agents in different states](docs/screenshots/states-scene.png)
 
-| État | Ce qu'on voit | Déclencheur (hook Claude Code) |
+| State | What you see | Trigger (Claude Code hook) |
 |---|---|---|
-| Travaille | à un poste, animation selon l'outil (frappe, lecture, terminal…) | `PreToolUse` |
-| Bloqué : permission | bulle **« ! » rouge**, le robot allume son ampoule | `PermissionRequest`, `Notification` (permission) |
-| Attend ta consigne | bulle **« ? » bleue** | `Notification` de type `idle_prompt` |
-| Inactif | se promène, discute, va à la cafétéria ; après ~25 s de repos, il **s'endort** (« z » qui monte) | aucun événement |
-| Terminé | petit saut de victoire avec étincelles, puis pause | `Stop` |
-| Sous-agent | version mini, teinte propre, relié à son parent | `Task` / `Agent`, `SubagentStart` |
-| Apparition / départ | nuage de pixels | `SessionStart` / `SessionEnd` |
+| Working | at a station, animation depends on the tool (typing, reading, terminal…) | `PreToolUse` |
+| Blocked: permission | red **"!"** bubble, the robot lights its bulb | `PermissionRequest`, `Notification` (permission) |
+| Waiting for your instruction | blue **"?"** bubble | `Notification` of type `idle_prompt` |
+| Idle | wanders, chats, goes to the cafeteria; after ~25 s of rest it **falls asleep** (rising "z") | no event |
+| Done | small victory jump with sparkles, then a break | `Stop` |
+| Sub-agent | mini version, own tint, linked to its parent | `Task` / `Agent`, `SubagentStart` |
+| Appear / leave | pixel cloud | `SessionStart` / `SessionEnd` |
 
-Un agent en attente (« ! » ou « ? ») reprend le travail dès son prochain outil ou dès que tu envoies un nouveau prompt.
+A waiting agent ("!" or "?") goes back to work on its next tool or as soon as you send a new prompt.
 
-![Tous les états, dans les 4 directions](docs/screenshots/states-sprites.png)
+![All states, in the 4 directions](docs/screenshots/states-sprites.png)
 
-La galerie (`/gallery`) montre chaque animation dans les 4 directions, pour les deux personnages et leur version mini.
+The gallery (`/gallery`) shows every animation in the 4 directions, for both characters and their mini versions.
 
-## Lancer
+## Run
 
 ```bash
 pnpm install
@@ -39,47 +39,47 @@ pnpm install
 pnpm dev
 ```
 
-Puis ouvrir http://localhost:4317 (scène) et http://localhost:4317/gallery (galerie de tous les sprites, animations, meubles, bulles).
-En dev, une **démo** tourne toute seule et s'arrête dès qu'un vrai événement arrive (`DEMO=0 pnpm dev` pour la couper).
+Then open http://localhost:4317 (scene) and http://localhost:4317/gallery (gallery of all sprites, animations, furniture, bubbles).
+In dev, a **demo** runs on its own and stops as soon as a real event arrives (`DEMO=0 pnpm dev` to turn it off).
 
-| Commande | Effet |
+| Command | Effect |
 |---|---|
-| `pnpm dev` | serveur (Vite en middleware) + WebSocket `/events` + `POST /hook` sur le port 4317 (`PORT=…`) |
-| `pnpm sim` | joue le scénario scripté vers le serveur (`--random`, `--stress 30`, `--speed 2`) |
-| `pnpm build && pnpm start` | version de production (sert `dist/`) |
-| `pnpm test` | tests unitaires (Vitest) |
-| `pnpm test:visual` | tests navigateur (Playwright ; `npx playwright install chromium` la première fois) |
-| `pnpm perf` | mesure FPS/CPU sur 5 min → `docs/qa/perf.json` |
+| `pnpm dev` | server (Vite as middleware) + `/events` WebSocket + `POST /hook` on port 4317 (`PORT=…`) |
+| `pnpm sim` | plays the scripted scenario to the server (`--random`, `--stress 30`, `--speed 2`) |
+| `pnpm build && pnpm start` | production build (serves `dist/`) |
+| `pnpm test` | unit tests (Vitest) |
+| `pnpm test:visual` | browser tests (Playwright; `npx playwright install chromium` the first time) |
+| `pnpm perf` | measures FPS/CPU over 5 min → `docs/qa/perf.json` |
 
-Sans serveur : `/?mock=1` (scénario scripté puis aléatoire), `/?mock=random`, `/?mock=stress&n=30`, avec `&speed=3` pour accélérer.
+Without a server: `/?mock=1` (scripted scenario then random), `/?mock=random`, `/?mock=stress&n=30`, with `&speed=3` to speed things up.
 
 ## Architecture
 
 ```
-shared/          contrat partagé front/back
+shared/          contract shared by front and back
   events.ts        AgentEvent + Snapshot (zod)
-  tool-stations.json  outil → type de poste → animation
-  scenario.ts      scénarios scripté / aléatoire / stress (simulateur et ?mock)
+  tool-stations.json  tool → station type → animation
+  scenario.ts      scripted / random / stress scenarios (simulator and ?mock)
 server/          Node (tsx)
-  index.ts         HTTP + WebSocket /events + POST /hook + POST /events + démo
-  hook-adapter.ts  payload hook Claude Code → AgentEvent
-  tracker.ts       agents vivants, rejoués (snapshot) à chaque (re)connexion
-src/engine/      moteur générique (ne connaît aucun personnage)
-  bitmap, shape, isoPaint   pixels, masques auto-ombrés, primitives iso
-  iso.ts           projection 2:1 (tuile 32×16) + tri de profondeur topologique
-  pathfinding.ts   A* 4-connexe + murs fins (cloisons)
-  agent.ts         position, déplacement, animation d'un agent
-  sprite.ts        CharacterDefinition → frames pré-rendues (miroirs, teinte, poof générique)
-  loop.ts          boucle rAF plafonnée à 30 fps, arrêtée si document.hidden
-src/characters/  un fichier par personnage + registry + kinds.json
-src/world/       palette, meubles, plan du bureau (layout.ts), rendu statique
-src/scene/       simulation (office.ts), compositeur, caméra, ambiance, bulles
+  index.ts         HTTP + WebSocket /events + POST /hook + POST /events + demo
+  hook-adapter.ts  Claude Code hook payload → AgentEvent
+  tracker.ts       live agents, replayed (snapshot) on every (re)connection
+src/engine/      generic engine (knows no character)
+  bitmap, shape, isoPaint   pixels, auto-shaded masks, iso primitives
+  iso.ts           2:1 projection (32×16 tile) + topological depth sort
+  pathfinding.ts   4-connected A* + thin walls (partitions)
+  agent.ts         position, movement, animation of an agent
+  sprite.ts        CharacterDefinition → pre-rendered frames (mirrors, tint, generic poof)
+  loop.ts          rAF loop capped at 30 fps, stopped if document.hidden
+src/characters/  one file per character + registry + kinds.json
+src/world/       palette, furniture, office plan (layout.ts), static rendering
+src/scene/       simulation (office.ts), compositor, camera, ambience, bubbles
 ```
 
-La simulation (`src/scene/office.ts`) est de la logique pure, testée avec une horloge factice. Cycle de vie d'un agent :
+The simulation (`src/scene/office.ts`) is pure logic, tested with a fake clock. Agent lifecycle:
 `spawning → idle ⇄ walking → working ⇄ waiting → done → (returning) → despawning`.
 
-## Format des événements
+## Event format
 
 ```ts
 type AgentEvent =
@@ -90,11 +90,11 @@ type AgentEvent =
   | { type: "agent_despawn"; agentId: string };
 ```
 
-- `agent_waiting` : `need: "permission"` (par défaut, « ! » rouge) ou `"input"` (« ? » bleu, l'agent attend ton prochain message).
-- `AgentKind` : `"claude"` aujourd'hui (et `"robot"` pour la démo). N'importe quelle chaîne est acceptée ; un type inconnu prend le personnage par défaut.
-- Envoi direct : `POST /events` avec un `AgentEvent` (ou un tableau). Réponse `202`, ou `400` si invalide.
-- Côté écran, le WebSocket `ws://host/events` reçoit les `AgentEvent`, et d'abord un `{ type: "snapshot", agents: [...] }` qui resynchronise l'écran après une (re)connexion. La reconnexion est automatique (1 s → 10 s).
-- Robustesse : un événement pour un agent inconnu le crée (`agent_tool`, `agent_waiting`) ou est ignoré (`agent_done`, `agent_despawn`) ; un double `agent_done` est sans effet ; les sous-agents disparaissent avec leur parent.
+- `agent_waiting`: `need: "permission"` (default, red "!") or `"input"` (blue "?", the agent is waiting for your next message).
+- `AgentKind`: `"claude"` today (and `"robot"` for the demo). Any string is accepted; an unknown kind gets the default character.
+- Direct sending: `POST /events` with an `AgentEvent` (or an array). Responds `202`, or `400` if invalid.
+- On the screen side, the WebSocket `ws://host/events` receives the `AgentEvent`s, starting with a `{ type: "snapshot", agents: [...] }` that resynchronizes the screen after a (re)connection. Reconnection is automatic (1 s → 10 s).
+- Robustness: an event for an unknown agent creates it (`agent_tool`, `agent_waiting`) or is ignored (`agent_done`, `agent_despawn`); a double `agent_done` has no effect; sub-agents disappear with their parent.
 
 ```bash
 curl -X POST localhost:4317/events -H 'content-type: application/json' -d '{"type":"agent_spawn","agentId":"demo","kind":"claude"}'
@@ -104,45 +104,44 @@ curl -X POST localhost:4317/events -H 'content-type: application/json' -d '{"typ
 curl -X POST localhost:4317/events -H 'content-type: application/json' -d '{"type":"agent_tool","agentId":"demo","tool":"Bash","summary":"pnpm test"}'
 ```
 
-## Ajouter un personnage
+## Adding a character
 
-1. Créer `src/characters/monperso.ts` qui exporte une `CharacterDefinition` (voir `robot.ts`, ~150 lignes) :
-   palette, couleurs non teintées (`fixedColors`), tailles `full` / `mini` (cadre, ancrage des pieds, ombre, tête), animations (réutiliser `STANDARD_ANIMATIONS` et `poseFor()` de `pose.ts` pour le même « feel »), une fonction `draw(bitmap, ctx)` qui dessine une frame de face (SE) ou de dos (NE), et des préférences de pause (`idlePreferences`).
-2. L'enregistrer dans `src/characters/index.ts` : `.register(MON_PERSO)`.
-3. Associer un `AgentKind` dans `src/characters/kinds.json` : `"codex": "monperso"`.
+1. Create `src/characters/mycharacter.ts` exporting a `CharacterDefinition` (see `robot.ts`, ~150 lines): palette, untinted colors (`fixedColors`), `full` / `mini` sizes (frame, foot anchor, shadow, head), animations (reuse `STANDARD_ANIMATIONS` and `poseFor()` from `pose.ts` for the same feel), a `draw(bitmap, ctx)` function that draws one frame from the front (SE) or the back (NE), and rest preferences (`idlePreferences`).
+2. Register it in `src/characters/index.ts`: `.register(MY_CHARACTER)`.
+3. Map an `AgentKind` in `src/characters/kinds.json`: `"codex": "mycharacter"`.
 
-Le moteur fournit les miroirs SW/NW, les variantes par instance (teinte, accessoire), le poof de spawn/despawn, l'ombre, les bulles et le tri de profondeur. Pour passer plus tard à des spritesheets PNG, il suffit que `draw` copie les pixels d'une image dans le `Bitmap` fourni.
+The engine provides the SW/NW mirrors, per-instance variants (tint, accessory), the spawn/despawn poof, the shadow, bubbles and depth sorting. To switch to PNG spritesheets later, `draw` just needs to copy the pixels of an image into the provided `Bitmap`.
 
-## Ajouter un poste, un meuble ou une pièce
+## Adding a station, a piece of furniture or a room
 
-- **Meuble** : une `FurnitureDef` dans `src/world/furniture.ts` (emprise en tuiles, `draw(painter, palette, frame)` avec `box` / `planeX` / `planeY` / `planeZ`). Il apparaît dans la galerie via `ALL_FURNITURE`.
-- **Poste** : dans `src/world/layout.ts`, `put(MEUBLE, x, y)` puis `station(id, type, pièce, [{ x, y, dir }])` (cases où se placent les agents et leur orientation). Plusieurs emplacements par poste ; quand ils sont tous pris, les agents attendent à côté.
-- **Type de poste / outil** : `shared/tool-stations.json` (`tools` exacts, `prefixes` comme `mcp__`, `animations` par type de poste).
-- **Pièce** : ajouter un `Room` (position, taille, sol `planks` | `tiles` | `checker`, tapis optionnel), les `partitions` avec leurs `doors`, et éventuellement `windows` / `posters` / `fairyLights` / `lamps`. Le moteur, le tri de profondeur, l'A* et la caméra s'adaptent tout seuls.
+- **Furniture**: a `FurnitureDef` in `src/world/furniture.ts` (footprint in tiles, `draw(painter, palette, frame)` with `box` / `planeX` / `planeY` / `planeZ`). It shows up in the gallery via `ALL_FURNITURE`.
+- **Station**: in `src/world/layout.ts`, `put(FURNITURE, x, y)` then `station(id, type, room, [{ x, y, dir }])` (tiles where agents stand and their facing). Several slots per station; when all are taken, agents wait nearby.
+- **Station type / tool**: `shared/tool-stations.json` (exact `tools`, `prefixes` such as `mcp__`, `animations` per station type).
+- **Room**: add a `Room` (position, size, floor `planks` | `tiles` | `checker`, optional rug), the `partitions` with their `doors`, and optionally `windows` / `posters` / `fairyLights` / `lamps`. The engine, depth sorting, A* and camera adapt on their own.
 
-## Étape suivante : brancher Claude Code
+## Next step: hooking up Claude Code
 
-Le serveur accepte déjà les payloads bruts des hooks sur `POST /hook` (correspondance détaillée dans `server/hook-adapter.ts`) :
+The server already accepts raw hook payloads on `POST /hook` (detailed mapping in `server/hook-adapter.ts`):
 
-| Hook | Effet à l'écran |
+| Hook | Effect on screen |
 |---|---|
-| `SessionStart`, `UserPromptSubmit` | la session apparaît (bureau attitré) ; `UserPromptSubmit` sort aussi un agent de l'attente |
-| `PreToolUse` | l'agent va au poste de l'outil ; `Task` / `Agent` fait apparaître un sous-agent |
-| `PostToolUse` (Task), `SubagentStop` | le sous-agent revient faire son rapport puis disparaît |
-| `PermissionRequest`, `Notification` | bulle « ! » (permission demandée) ; `Notification` de type `idle_prompt` : bulle « ? » (attend ta consigne). L'outil ou le prompt suivant le remet au travail |
-| `SubagentStart` | associe l'`agent_id` du sous-agent (ses outils s'affichent sur lui) |
-| `Stop` | petit saut de victoire, puis pause café |
-| `SessionEnd` | la session disparaît |
+| `SessionStart`, `UserPromptSubmit` | the session appears (assigned desk); `UserPromptSubmit` also takes an agent out of waiting |
+| `PreToolUse` | the agent goes to the tool's station; `Task` / `Agent` spawns a sub-agent |
+| `PostToolUse` (Task), `SubagentStop` | the sub-agent returns to report, then disappears |
+| `PermissionRequest`, `Notification` | "!" bubble (permission requested); `Notification` of type `idle_prompt`: "?" bubble (waiting for your instruction). The next tool or prompt puts it back to work |
+| `SubagentStart` | links the sub-agent's `agent_id` (its tools are shown on it) |
+| `Stop` | small victory jump, then a coffee break |
+| `SessionEnd` | the session disappears |
 
-Installation automatique (fusionne avec les hooks existants, idempotente, sauvegarde horodatée du fichier) :
+Automatic installation (merges with existing hooks, idempotent, timestamped backup of the file):
 
 ```bash
 node scripts/claude-hooks.mjs install
 ```
 
-`node scripts/claude-hooks.mjs status` / `uninstall`. Les hooks sont pris en compte par les sessions déjà ouvertes à leur prochain événement. Le script ajoute aussi `PermissionRequest`, `PostToolUseFailure`, `StopFailure` et `SubagentStart`, gérés par l'adaptateur.
+`node scripts/claude-hooks.mjs status` / `uninstall`. Hooks are picked up by already-open sessions on their next event. The script also adds `PermissionRequest`, `PostToolUseFailure`, `StopFailure` and `SubagentStart`, handled by the adapter.
 
-Équivalent manuel (minimal) dans `~/.claude/settings.json`, qui couvre toutes les sessions Claude Code, terminal comme app desktop :
+Manual equivalent (minimal) in `~/.claude/settings.json`, which covers all Claude Code sessions, terminal and desktop app alike:
 
 ```json
 {
@@ -159,58 +158,58 @@ node scripts/claude-hooks.mjs install
 }
 ```
 
-Le hook reçoit le JSON de l'événement sur stdin ; `curl --data-binary @-` le transmet tel quel. `-m 1` et `|| true` garantissent qu'un écran éteint ne ralentit ni ne bloque jamais Claude Code.
+The hook receives the event JSON on stdin; `curl --data-binary @-` forwards it as is. `-m 1` and `|| true` guarantee that a screen that is off never slows down or blocks Claude Code.
 
-À vérifier lors de l'intégration :
-- les appels d'outils faits *dans* un sous-agent sont attribués au sous-agent via l'`agent_id` reçu au `SubagentStart` ; sans `agent_id`, ils s'affichent sur l'agent de la session ;
-- l'app Claude Desktop (chat) n'a pas de hooks : seules les sessions Claude Code, y compris celles de l'app desktop, sont visibles.
+To check during integration:
+- tool calls made *inside* a sub-agent are attributed to the sub-agent through the `agent_id` received at `SubagentStart`; without an `agent_id`, they show on the session's agent;
+- the Claude Desktop app (chat) has no hooks: only Claude Code sessions are visible, including those of the desktop app.
 
-## Écran de veille macOS
+## macOS screen saver
 
-1. Lancer le serveur au login (LaunchAgent `com.agent-office.server`, relancé automatiquement, logs dans `~/Library/Logs/agent-office.log`) :
+1. Start the server at login (LaunchAgent `com.agent-office.server`, restarted automatically, logs in `~/Library/Logs/agent-office.log`):
 
    ```bash
    scripts/launchagent.sh install
    ```
 
-   `scripts/launchagent.sh status` / `uninstall` ; relancer `install` après une mise à jour du code (si le `bootstrap` échoue juste après le `bootout`, relancer la commande). `DEMO=0 scripts/launchagent.sh install` désactive la démo.
+   `scripts/launchagent.sh status` / `uninstall`; re-run `install` after a code update (if `bootstrap` fails right after `bootout`, re-run the command). `DEMO=0 scripts/launchagent.sh install` disables the demo.
 
-2. Installer l'économiseur (recommandé : le `.saver` léger, testé sur macOS 26) :
+2. Install the saver (recommended: the lightweight `.saver`, tested on macOS 26):
 
    ```bash
    saver/legacy/build.sh
    ```
 
-3. Réglages Système → Fond d'écran → Économiseur d'écran → **AgentOffice** (sans espace). Après une reconstruction : `killall legacyScreenSaver ScreenSaverEngine`.
+3. System Settings → Wallpaper → Screen Saver → **AgentOffice** (no space). After a rebuild: `killall legacyScreenSaver ScreenSaverEngine`.
 
-Le `.saver` n'embarque qu'un `WKWebView` qui affiche `http://localhost:4317/` : les changements de l'interface (`pnpm build`) sont pris en compte sans le reconstruire. Il neutralise la détection d'occlusion de WebKit, sinon la page est considérée comme cachée et clignote / devient noire, et pilote les frames à la main (voir [`saver/README.md`](saver/README.md)).
+The `.saver` only embeds a `WKWebView` showing `http://localhost:4317/`: UI changes (`pnpm build`) are picked up without rebuilding it. It disables WebKit's occlusion detection, otherwise the page is considered hidden and flickers / goes black, and drives frames by hand (see [`saver/README.md`](saver/README.md)).
 
-Il existe aussi une variante app extension (`saver/install.sh`, « Agent Office » avec espace), plus proche des économiseurs Apple mais moins testée.
+There is also an app-extension variant (`saver/install.sh`, "Agent Office" with a space), closer to Apple's own savers but less tested.
 
-**Mac gérés par MDM** : si un profil impose l'économiseur (`moduleName` dans `/Library/Managed Preferences/com.apple.screensaver.plist`), macOS lance celui-ci en plein écran quel que soit le choix dans les Réglages. Il faut demander à l'administrateur de retirer cette clé.
+**MDM-managed Macs**: if a profile enforces the saver (`moduleName` in `/Library/Managed Preferences/com.apple.screensaver.plist`), macOS launches that one full screen regardless of the choice in Settings. Ask the administrator to remove this key.
 
-La page est déjà en mode écran de veille : plein écran, curseur masqué, aucune interaction, fond sombre, scale entier automatique, rendu arrêté quand la page est cachée.
+The page is already in screen saver mode: full screen, hidden cursor, no interaction, dark background, automatic integer scale, rendering stopped when the page is hidden.
 
-## Qualité
+## Quality
 
-- `docs/art-direction.md` : charte (palette, lumière, contours, proportions, décisions de design).
-- `docs/qa-report.md` : critères d'acceptation, résultats des tests, mesures de performance, bugs trouvés et corrigés.
-- `docs/screenshots/` : captures de chaque jalon et de la QA (4 résolutions).
+- `docs/art-direction.md`: style guide (palette, lighting, outlines, proportions, design decisions).
+- `docs/qa-report.md`: acceptance criteria, test results, performance measurements, bugs found and fixed.
+- `docs/screenshots/`: screenshots of each milestone and of the QA (4 resolutions).
 
-## Contribuer
+## Contributing
 
-Le projet est ouvert à tous : issues et pull requests bienvenues. Pistes faciles : un nouveau personnage (`src/characters/`), un meuble ou une pièce (`src/world/`), de nouveaux états visuels, la prise en charge d'autres agents de code (envoie des `AgentEvent` sur `POST /events`).
+The project is open to everyone: issues and pull requests welcome. Easy leads: a new character (`src/characters/`), a piece of furniture or a room (`src/world/`), new visual states, support for other coding agents (send `AgentEvent`s to `POST /events`).
 
-Avant d'ouvrir une PR :
+Before opening a PR:
 
 ```bash
 pnpm typecheck && pnpm test
 ```
 
-et vérifier le rendu dans la galerie (`pnpm dev` puis `/gallery`) ; `pnpm test:visual` lance les tests navigateur.
+and check the rendering in the gallery (`pnpm dev` then `/gallery`); `pnpm test:visual` runs the browser tests.
 
-Hors périmètre actuel : interactions souris, sons, persistance, authentification (le serveur n'a pas d'authentification : ne l'expose pas sur Internet).
+Out of scope for now: mouse interactions, sounds, persistence, authentication (the server has no authentication: do not expose it to the Internet).
 
-## Licence
+## License
 
-[MIT](LICENSE). Le dossier `saver/` reprend un modèle d'économiseur sous licence MIT (voir `saver/LICENSE`).
+[MIT](LICENSE). The `saver/` folder reuses a screen saver template under the MIT license (see `saver/LICENSE`).

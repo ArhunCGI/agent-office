@@ -1,38 +1,38 @@
-# Agent Office — économiseur d'écran macOS (app extension)
+# Agent Office — macOS screen saver (app extension)
 
-Économiseur d'écran natif qui affiche la scène Agent Office (`http://localhost:4317/`) en plein écran.
+Native screen saver that shows the Agent Office scene (`http://localhost:4317/`) full screen.
 
-Il est construit comme une **app extension** (`.appex`, point d'extension `com.apple.screensaver`), le format des économiseurs Apple (Hello, Flurry, Drift…), et non comme un `.saver` hérité : depuis macOS 26, le moteur `legacyScreenSaver` des `.saver` tiers retombe sur Hello en plein écran (cf. WebViewScreenSaver, issue #97).
+It is built as an **app extension** (`.appex`, extension point `com.apple.screensaver`), the format Apple's own savers use (Hello, Flurry, Drift…), rather than a legacy `.saver`: since macOS 26, the `legacyScreenSaver` engine falls back to Hello full screen for third-party `.saver` bundles (see WebViewScreenSaver, issue #97).
 
-Basé sur [AppexSaverMinimal](https://github.com/AerialScreensaver/AppexSaverMinimal) de Guillaume Louel (licence MIT, voir `LICENSE` et `UPSTREAM-README.md`). Changements : vue web plein écran à la place de l'arc-en-ciel, identifiants `dev.agent-office.saver`, accès réseau sortant (sandbox), ATS `NSAllowsLocalNetworking`, pas de feuille d'options, signature locale par défaut.
+Based on [AppexSaverMinimal](https://github.com/AerialScreensaver/AppexSaverMinimal) by Guillaume Louel (MIT license, see `LICENSE` and `UPSTREAM-README.md`). Changes: a full-screen web view instead of the rainbow, `dev.agent-office.saver` identifiers, outgoing network access (sandbox), ATS `NSAllowsLocalNetworking`, no options sheet, local signing by default.
 
-## Installer
+## Install
 
-Prérequis : Xcode, et le serveur Agent Office lancé (`scripts/launchagent.sh install` à la racine du dépôt).
+Requirements: Xcode, and the Agent Office server running (`scripts/launchagent.sh install` at the repository root).
 
 ```bash
 saver/install.sh
 ```
 
-Le script compile en Release avec la **signature locale** (aucun compte Apple Developer), copie l'app dans `~/Applications/AgentOfficeSaver.app`, l'enregistre auprès de PlugInKit et redémarre `WallpaperAgent`. Ensuite : Réglages Système → Fond d'écran → Économiseur d'écran → **Agent Office**.
+The script builds in Release with **local signing** (no Apple Developer account), copies the app to `~/Applications/AgentOfficeSaver.app`, registers it with PlugInKit and restarts `WallpaperAgent`. Then: System Settings → Wallpaper → Screen Saver → **Agent Office**.
 
-Désinstaller : `saver/install.sh uninstall`.
+Uninstall: `saver/install.sh uninstall`.
 
-URL personnalisée (par défaut `http://localhost:4317/`) : clé `url` du domaine `dev.agent-office.saver.Extension` (lu via `ScreenSaverDefaults` depuis le conteneur sandbox de l'extension).
+Custom URL (default `http://localhost:4317/`): the `url` key of the `dev.agent-office.saver.Extension` domain (read through `ScreenSaverDefaults` from the extension's sandbox container).
 
-## Variante `.saver` légère (testée, fonctionne)
+## Lightweight `.saver` variant (tested, works)
 
-`saver/legacy/build.sh` compile un `.saver` minimal (`AgentOffice.saver`, URL codée en dur dans `saver/legacy/AgentOfficeLegacyView.swift`) dans `~/Library/Screen Savers/` ; il s'affiche en plein écran sans clignoter sur macOS 26. Sélectionner **AgentOffice** (sans espace) dans les Réglages, après `killall legacyScreenSaver` si besoin.
+`saver/legacy/build.sh` builds a minimal `.saver` (`AgentOffice.saver`, URL hard-coded in `saver/legacy/AgentOfficeLegacyView.swift`) into `~/Library/Screen Savers/`; it renders full screen without flickering on macOS 26. Select **AgentOffice** (no space) in Settings, after `killall legacyScreenSaver` if needed.
 
-## Clignotement / écran noir dans un WKWebView d'économiseur
+## Flicker / black screen in a screen saver WKWebView
 
-Dans un économiseur, WebKit croit la fenêtre masquée : `document.hidden` reste vrai, `requestAnimationFrame` s'arrête et le contenu est caché (`hideContentUntilPendingUpdate`), même si le JS tourne. Contournement appliqué dans les deux vues :
+Inside a screen saver, WebKit thinks the window is hidden: `document.hidden` stays true, `requestAnimationFrame` stops and the content is hidden (`hideContentUntilPendingUpdate`), even though JS keeps running. Workaround applied in both views:
 
-- `windowOcclusionDetectionEnabled = false` sur le `WKWebView` et `pageVisibilityBasedProcessSuppressionEnabled = false` (API privées, via KVC) ;
-- script injecté qui force `document.hidden = false` et `window.__forceManualFrames`, puis un `CADisplayLink` qui appelle `window.__agentOfficeManualTick()` (voir `src/engine/loop.ts`).
+- `windowOcclusionDetectionEnabled = false` on the `WKWebView` and `pageVisibilityBasedProcessSuppressionEnabled = false` (private APIs, via KVC);
+- an injected script that forces `document.hidden = false` and `window.__forceManualFrames`, then a `CADisplayLink` that calls `window.__agentOfficeManualTick()` (see `src/engine/loop.ts`).
 
-## Limites
+## Limitations
 
-- **API privée** : Apple n'a pas documenté ce point d'extension pour les tiers ; une mise à jour de macOS peut le casser. Distribution hors App Store uniquement ; pour d'autres Mac, signer avec un Developer ID et notariser.
-- **Mac gérés (MDM)** : un profil de configuration qui impose `com.apple.screensaver` → `moduleName` (par ex. `Hello`) l'emporte sur le choix fait dans les Réglages : l'aperçu affiche Agent Office mais le plein écran lance l'économiseur imposé. Vérifier avec `plutil -p "/Library/Managed Preferences/com.apple.screensaver.plist"`. Seul l'administrateur MDM peut lever cette contrainte.
-- Diagnostic : `log stream --predicate 'subsystem BEGINSWITH "dev.agent-office"'` montre le chargement de l'extension et de la page.
+- **Private API**: Apple has not documented this extension point for third parties; a macOS update may break it. Distribution outside the App Store only; for other Macs, sign with a Developer ID and notarize.
+- **Managed Macs (MDM)**: a configuration profile that enforces `com.apple.screensaver` → `moduleName` (e.g. `Hello`) overrides the choice made in Settings: the preview shows Agent Office but full screen launches the enforced saver. Check with `plutil -p "/Library/Managed Preferences/com.apple.screensaver.plist"`. Only the MDM administrator can lift this constraint.
+- Diagnostics: `log stream --predicate 'subsystem BEGINSWITH "dev.agent-office"'` shows the extension and page loading.
